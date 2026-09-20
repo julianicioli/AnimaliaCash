@@ -1,0 +1,6 @@
+{
+  "name": "Animalia Cash",
+  "description": "Animalia Cash - Sistema de gestão e apuração detalhada de custos para clínicas veterinárias: Banho & Tosa, Cirurgias e Internações com precificação por peso.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
