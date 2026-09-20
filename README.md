@@ -1,20 +1,31 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Animalia Cash
 
-# Run and deploy your AI Studio app
+Sistema responsivo para gestão e apuração de custos de clínicas veterinárias.
 
-This contains everything you need to run your app locally.
+## Desenvolvimento local
 
-View your app in AI Studio: https://ai.studio/apps/b55f7b84-17f6-4caa-a98f-799e636bd676
+Pré-requisito: Node.js.
 
-## Run Locally
+```bash
+npm install
+npm run dev
+```
 
-**Prerequisites:**  Node.js
+A aplicação ficará disponível em `http://localhost:3000`.
 
+Cada módulo funciona como uma página HTML independente:
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- `http://localhost:3000/banho-tosa.html`
+- `http://localhost:3000/cirurgia.html`
+- `http://localhost:3000/internacao.html`
+- `http://localhost:3000/insumos.html`
+
+Isso permite conectar cada tela a um endpoint de backend próprio futuramente.
+
+## Outros comandos
+
+```bash
+npm run lint
+npm run build
+npm run preview
+```
