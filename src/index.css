@@ -1,1 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Cores da marca (logo Animalia Cash) */
+  --color-brand-50: #ebf8f2;
+  --color-brand-100: #cdeedf;
+  --color-brand-500: #00a868;
+  --color-brand-600: #00915a;
+  --color-brand-700: #007849;
+  --color-ink: #0b2545;
+}
+
+@media print {
+  header, footer, [data-print-hide] { display: none !important; }
+  body:has([role="dialog"]) main { display: none !important; }
+}

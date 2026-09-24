@@ -19,6 +19,7 @@ Cada módulo funciona como uma página HTML independente:
 - `http://localhost:3000/cirurgia.html`
 - `http://localhost:3000/internacao.html`
 - `http://localhost:3000/insumos.html`
+- `http://localhost:3000/configuracoes.html`
 
 Isso permite conectar cada tela a um endpoint de backend próprio futuramente.
 

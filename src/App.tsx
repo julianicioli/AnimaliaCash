@@ -1,14 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Scissors, 
-  Stethoscope, 
-  Bed, 
-  Plus, 
-  Search, 
-  Package, 
-  SlidersHorizontal,
-  X
-} from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Search, X } from 'lucide-react';
 import { ClinicSettings, Insumo, Procedure, ProcedureCategory } from './types';
 import { initialClinicSettings, initialInsumos, initialProcedures } from './data/initialData';
 import { Navbar, ActiveTab } from './components/Navbar';
@@ -17,91 +8,95 @@ import { ProcedureDetailModal } from './components/ProcedureDetailModal';
 import { ProcedureEditModal } from './components/ProcedureEditModal';
 import { InsumosManager } from './components/InsumosManager';
 import { InsumoModal } from './components/InsumoModal';
-import { getCategoryLabel } from './utils/costCalculations';
+import { SettingsPage } from './components/SettingsPage';
+import { primaryButtonClass } from './components/Modal';
+import { matchesWeightRange, WEIGHT_RANGES, WeightRange } from './utils/costCalculations';
 
 interface AppProps {
   initialTab?: ActiveTab;
 }
 
+const CATEGORY_HEADER: Record<ProcedureCategory, { title: string; description: string; newLabel: string }> = {
+  banho_tosa: {
+    title: 'Banho & Tosa',
+    description: 'Custo de cada serviço por porte do animal.',
+    newLabel: 'Novo banho & tosa',
+  },
+  cirurgia: {
+    title: 'Cirurgias',
+    description: 'Custo de cada cirurgia por peso do paciente, incluindo anestesia e comissão.',
+    newLabel: 'Nova cirurgia',
+  },
+  internacao: {
+    title: 'Internação',
+    description: 'Custo das diárias de internação por porte do animal.',
+    newLabel: 'Nova diária',
+  },
+};
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? (JSON.parse(saved) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function usePersistedState<T>(key: string, value: T) {
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [key, value]);
+}
+
 export default function App({ initialTab = 'cirurgia' }: AppProps) {
-  // LocalStorage state initialization with fallback to rich preset data
   const [settings, setSettings] = useState<ClinicSettings>(() => {
-    try {
-      const saved = localStorage.getItem('vetcusto_settings_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          ...initialClinicSettings,
-          ...parsed,
-          projectName: (parsed.projectName === 'VetCusto' || !parsed.projectName) ? 'Animalia Cash' : parsed.projectName,
-          tagline: '',
-          logoUrl: parsed.logoUrl || '/logo.jpg',
-        };
-      }
-      return initialClinicSettings;
-    } catch {
-      return initialClinicSettings;
-    }
+    const parsed = loadFromStorage<Partial<ClinicSettings> | null>('vetcusto_settings_v2', null);
+    if (!parsed) return initialClinicSettings;
+    return {
+      ...initialClinicSettings,
+      ...parsed,
+      projectName: (parsed.projectName === 'VetCusto' || !parsed.projectName) ? 'Animalia Cash' : parsed.projectName,
+      logoUrl: parsed.logoUrl || '/logo.jpg',
+    };
   });
-
+  const [procedures, setProcedures] = useState<Procedure[]>(() =>
+    loadFromStorage('vetcusto_procedures_v2', initialProcedures).map((p) =>
+      // Dados antigos de internação guardavam só as horas de atendimento em durationMinutes
+      p.category === 'internacao' && p.laborMinutes === undefined && p.durationMinutes < 1440
+        ? { ...p, durationMinutes: 1440, laborMinutes: p.durationMinutes }
+        : p
+    )
+  );
   const [insumos, setInsumos] = useState<Insumo[]>(() => {
-    try {
-      const saved = localStorage.getItem('vetcusto_insumos_v2');
-      return saved ? JSON.parse(saved) : initialInsumos;
-    } catch {
-      return initialInsumos;
-    }
+    const saved = loadFromStorage('vetcusto_insumos_v2', initialInsumos);
+    // Recupera insumos padrão que algum procedimento referencia mas que faltam nos dados salvos
+    // (ex: insumos adicionados ao catálogo inicial depois que os dados foram gravados)
+    const savedIds = new Set(saved.map((i) => i.id));
+    const referencedIds = new Set(procedures.flatMap((p) => p.items.map((it) => it.insumoId)));
+    const missing = initialInsumos.filter((i) => !savedIds.has(i.id) && referencedIds.has(i.id));
+    return missing.length > 0 ? [...saved, ...missing] : saved;
   });
 
-  const [procedures, setProcedures] = useState<Procedure[]>(() => {
-    try {
-      const saved = localStorage.getItem('vetcusto_procedures_v2');
-      return saved ? JSON.parse(saved) : initialProcedures;
-    } catch {
-      return initialProcedures;
-    }
-  });
+  usePersistedState('vetcusto_settings_v2', settings);
+  usePersistedState('vetcusto_insumos_v2', insumos);
+  usePersistedState('vetcusto_procedures_v2', procedures);
 
-  // Save to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('vetcusto_settings_v2', JSON.stringify(settings));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [settings]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('vetcusto_insumos_v2', JSON.stringify(insumos));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [insumos]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('vetcusto_procedures_v2', JSON.stringify(procedures));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [procedures]);
-
-  // View state: strictly focused on requested categories
   const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedWeightFilter, setSelectedWeightFilter] = useState<string>('todos');
+  const [weightRange, setWeightRange] = useState<WeightRange>('todos');
 
   // Modals
   const [detailProcedure, setDetailProcedure] = useState<Procedure | null>(null);
   const [editProcedure, setEditProcedure] = useState<Procedure | null>(null);
   const [isCreatingProcedure, setIsCreatingProcedure] = useState<boolean>(false);
-  const [createCategory, setCreateCategory] = useState<ProcedureCategory>('cirurgia');
-
   const [editInsumo, setEditInsumo] = useState<Insumo | null>(null);
   const [isCreatingInsumo, setIsCreatingInsumo] = useState<boolean>(false);
 
-  // Map of insumos for fast lookup
   const insumosMap = useMemo(() => {
     const map = new Map<string, Insumo>();
     insumos.forEach((ins) => map.set(ins.id, ins));
@@ -134,7 +129,7 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
   };
 
   const handleDeleteProcedure = (id: string) => {
-    if (confirm('Tem certeza que deseja remover este procedimento de custo?')) {
+    if (confirm('Tem certeza que deseja remover este procedimento?')) {
       setProcedures((prev) => prev.filter((p) => p.id !== id));
       if (detailProcedure?.id === id) setDetailProcedure(null);
     }
@@ -157,13 +152,10 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
 
   const handleDeleteInsumo = (id: string) => {
     const count = procedures.filter((p) => p.items.some((it) => it.insumoId === id)).length;
-    if (count > 0) {
-      if (!confirm(`Este insumo é usado em ${count} procedimento(s). Deseja realmente excluí-lo?`)) {
-        return;
-      }
-    } else {
-      if (!confirm('Deseja excluir este insumo?')) return;
-    }
+    const message = count > 0
+      ? `Este insumo é usado em ${count} procedimento(s). Deseja realmente excluí-lo?`
+      : 'Deseja excluir este insumo?';
+    if (!confirm(message)) return;
 
     setInsumos((prev) => prev.filter((i) => i.id !== id));
     setProcedures((prev) =>
@@ -174,239 +166,162 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
     );
   };
 
-  // Filtered procedures for current category view
-  const currentCategoryProcedures = useMemo(() => {
-    if (activeTab === 'insumos') return [];
-
-    return procedures
-      .filter((p) => p.category === activeTab)
-      .filter((p) => {
-        // Weight filter
-        if (selectedWeightFilter === '10kg') {
-          return (p.targetWeightKg && p.targetWeightKg <= 10) || p.name.includes('10 kg') || p.name.includes('Pequeno') || p.name.includes('Mini');
-        }
-        if (selectedWeightFilter === '20kg') {
-          return p.targetWeightKg === 20 || p.name.includes('20 kg');
-        }
-        if (selectedWeightFilter === '30kg') {
-          return p.targetWeightKg === 30 || p.name.includes('30 kg');
-        }
-        if (selectedWeightFilter === '40kg') {
-          return (p.targetWeightKg && p.targetWeightKg >= 40) || p.name.includes('40 kg') || p.name.includes('Gigante');
-        }
-        return true;
-      })
-      .filter((p) => {
-        if (!searchTerm.trim()) return true;
-        const q = searchTerm.toLowerCase();
-        return p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
-      });
-  }, [procedures, activeTab, searchTerm, selectedWeightFilter]);
-
-  // Category Header config
-  const getCategoryHeaderInfo = () => {
-    switch (activeTab) {
-      case 'banho_tosa':
-        return {
-          title: 'Custos de Banho & Tosa',
-          description: 'Custo detalhado por porte e peso (10 kg, 20 kg, 30 kg, 40 kg+): água encanada/aquecida, shampoos, energia de secadores e sopradores, toalhas higienizadas, lâminas e adereços.',
-          icon: Scissors,
-          colorClass: 'text-teal-700 bg-teal-50 border-teal-200',
-        };
-      case 'cirurgia':
-        return {
-          title: 'Custos de Cirurgias Veterinárias',
-          description: 'Custos pré-definidos por peso do animal (10 kg, 20 kg, 30 kg, 40 kg+): luvas estéreis, lâminas de bisturi descartáveis, fios de sutura (nylon/vicryl), campos, anestésicos (propofol, isoflurano), oxigênio e fluidoterapia.',
-          icon: Stethoscope,
-          colorClass: 'text-rose-700 bg-rose-50 border-rose-200',
-        };
-      case 'internacao':
-        return {
-          title: 'Custos de Internação Hospitalar',
-          description: 'Custos pré-definidos de diárias por porte (10 kg, 20 kg, 30 kg, 40 kg+): bolsas de soro Ringer Lactato, tapetes descartáveis por nível de diurese, cateteres, equipos, luvas de procedimento, seringas e leito hospitalar.',
-          icon: Bed,
-          colorClass: 'text-amber-700 bg-amber-50 border-amber-200',
-        };
-      default:
-        return null;
-    }
+  const handleResetData = () => {
+    if (!confirm('Substituir todos os procedimentos e insumos pelos dados de exemplo? As alterações feitas serão perdidas.')) return;
+    setInsumos(initialInsumos);
+    setProcedures(initialProcedures);
   };
 
-  const categoryInfo = getCategoryHeaderInfo();
+  const procedureCategory: ProcedureCategory | null = activeTab in CATEGORY_HEADER ? (activeTab as ProcedureCategory) : null;
+
+  const categoryProcedures = useMemo(
+    () => (procedureCategory ? procedures.filter((p) => p.category === procedureCategory) : []),
+    [procedures, procedureCategory]
+  );
+
+  const visibleProcedures = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return categoryProcedures
+      .filter((p) => matchesWeightRange(p.targetWeightKg, weightRange))
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR') || (a.targetWeightKg ?? 0) - (b.targetWeightKg ?? 0));
+  }, [categoryProcedures, searchTerm, weightRange]);
+
+  const isFiltering = weightRange !== 'todos' || searchTerm.trim() !== '';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900 selection:bg-teal-500 selection:text-white">
-      {/* Top Navbar */}
+    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
       <Navbar
         activeTab={activeTab}
         onSelectTab={(tab) => {
           setActiveTab(tab);
           setSearchTerm('');
-          setSelectedWeightFilter('todos');
+          setWeightRange('todos');
         }}
         settings={settings}
-        totalProcedures={procedures.length}
       />
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Category Views: Banho e Tosa, Cirurgias, Internação */}
-        {(activeTab === 'banho_tosa' || activeTab === 'cirurgia' || activeTab === 'internacao') && categoryInfo && (
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {procedureCategory && (
           <div className="space-y-6">
-            {/* Category Header Card */}
-            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${categoryInfo.colorClass}`}>
-                  <categoryInfo.icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">
-                    {categoryInfo.title}
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
-                    {categoryInfo.description}
-                  </p>
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">{CATEGORY_HEADER[procedureCategory].title}</h1>
+                <p className="text-sm text-slate-500 mt-1">{CATEGORY_HEADER[procedureCategory].description}</p>
               </div>
-
               <button
                 id={`btn-new-procedure-${activeTab}`}
-                onClick={() => {
-                  setCreateCategory(activeTab);
-                  setIsCreatingProcedure(true);
-                }}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
+                onClick={() => setIsCreatingProcedure(true)}
+                className={`${primaryButtonClass} shrink-0`}
               >
                 <Plus className="w-4 h-4" />
-                {activeTab === 'cirurgia'
-                  ? 'Nova Cirurgia Pré-definida'
-                  : activeTab === 'banho_tosa'
-                  ? 'Novo Banho & Tosa Pré-definido'
-                  : 'Nova Diária de Internação Pré-definida'}
+                {CATEGORY_HEADER[procedureCategory].newLabel}
               </button>
             </div>
 
-            {/* Weight Filter Bar & Search */}
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                {/* Weight Selector */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1 mr-1">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-teal-600" />
-                    Filtrar por Peso do Cão:
-                  </span>
-                  {[
-                    { id: 'todos', label: 'Todos os Pesos' },
-                    { id: '10kg', label: 'Até 10 kg (Pequeno)' },
-                    { id: '20kg', label: '20 kg (Médio)' },
-                    { id: '30kg', label: '30 kg (Grande)' },
-                    { id: '40kg', label: '40 kg+ (Gigante)' },
-                  ].map((filter) => (
-                    <button
-                      key={filter.id}
-                      onClick={() => setSelectedWeightFilter(filter.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                        selectedWeightFilter === filter.id
-                          ? 'bg-amber-600 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Search Bar */}
-                <div className="relative w-full md:w-72">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    id="input-search-procedures"
-                    type="text"
-                    placeholder="Buscar procedimento..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
-                  />
-                  {searchTerm && (
-                    <button 
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+            {/* Filtros */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="inline-flex max-w-full p-1 bg-slate-200/60 rounded-lg overflow-x-auto self-start">
+                {WEIGHT_RANGES.map((range) => (
+                  <button
+                    key={range.id}
+                    onClick={() => setWeightRange(range.id)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                      weightRange === range.id
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                ))}
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2">
-                <span>
-                  Exibindo <strong>{currentCategoryProcedures.length}</strong> procedimentos pré-definidos com custo de insumos, mão de obra e margem calculados.
-                </span>
-                {selectedWeightFilter !== 'todos' && (
-                  <button 
-                    onClick={() => setSelectedWeightFilter('todos')}
-                    className="text-teal-700 hover:underline font-semibold"
+              <div className="relative w-full md:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="input-search-procedures"
+                  type="text"
+                  placeholder="Buscar procedimento"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    aria-label="Limpar busca"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    Limpar filtro de peso
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Grid of Procedure Cards */}
-            {currentCategoryProcedures.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {currentCategoryProcedures.map((proc) => (
-                  <ProcedureCard
-                    key={proc.id}
-                    procedure={proc}
-                    insumosMap={insumosMap}
-                    settings={settings}
-                    onViewDetails={(p) => setDetailProcedure(p)}
-                    onEdit={(p) => setEditProcedure(p)}
-                    onDuplicate={(p) => handleDuplicateProcedure(p)}
-                    onDelete={(id) => handleDeleteProcedure(id)}
-                  />
-                ))}
-              </div>
+            {visibleProcedures.length > 0 ? (
+              <>
+                <p className="text-sm text-slate-500">
+                  {visibleProcedures.length} de {categoryProcedures.length} procedimentos
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {visibleProcedures.map((proc) => (
+                    <ProcedureCard
+                      key={proc.id}
+                      procedure={proc}
+                      insumosMap={insumosMap}
+                      settings={settings}
+                      onViewDetails={setDetailProcedure}
+                      onEdit={setEditProcedure}
+                      onDuplicate={handleDuplicateProcedure}
+                      onDelete={handleDeleteProcedure}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
-              <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
-                <p className="text-sm font-bold text-slate-700">
-                  Nenhum procedimento encontrado para esta faixa de peso ou busca.
+              <div className="py-16 text-center bg-white rounded-xl border border-dashed border-slate-300">
+                <p className="font-medium text-slate-700">
+                  {isFiltering ? 'Nenhum procedimento encontrado.' : 'Nenhum procedimento cadastrado ainda.'}
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Clique no botão "Novo Procedimento Pré-definido" acima para cadastrar a ficha de custos.
+                <p className="text-sm text-slate-500 mt-1">
+                  {isFiltering ? 'Tente outra faixa de peso ou outro termo de busca.' : `Clique em "${CATEGORY_HEADER[procedureCategory].newLabel}" para começar.`}
                 </p>
+                {isFiltering && (
+                  <button
+                    onClick={() => {
+                      setWeightRange('todos');
+                      setSearchTerm('');
+                    }}
+                    className="mt-4 text-sm font-semibold text-brand-700 hover:underline cursor-pointer"
+                  >
+                    Limpar filtros
+                  </button>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* Tab 4: Cadastro de Itens & Insumos (Lançamento de luvas, energia, etc.) */}
         {activeTab === 'insumos' && (
           <InsumosManager
             insumos={insumos}
             procedures={procedures}
             onAddInsumo={() => setIsCreatingInsumo(true)}
-            onEditInsumo={(ins) => setEditInsumo(ins)}
-            onDeleteInsumo={(id) => handleDeleteInsumo(id)}
+            onEditInsumo={setEditInsumo}
+            onDeleteInsumo={handleDeleteInsumo}
           />
+        )}
+
+        {activeTab === 'configuracoes' && (
+          <SettingsPage settings={settings} onSave={setSettings} onResetData={handleResetData} />
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-5 mt-10 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>
-            © {new Date().getFullYear()} <strong>{settings.projectName || 'Animalia Cash'}</strong> • {settings.tagline || 'Soluções Financeiras'} — Gestão de Custos
-          </span>
-          <span className="text-slate-400 font-medium">
-            Pré-definição de insumos calibrada por peso (10 kg, 20 kg, 30 kg, 40 kg+)
-          </span>
-        </div>
+      <footer className="py-6 text-center text-xs text-slate-400">
+        © {new Date().getFullYear()} {settings.projectName || 'Animalia Cash'} · Gestão de custos veterinários
       </footer>
 
-      {/* Modals */}
       {detailProcedure && (
         <ProcedureDetailModal
           procedure={detailProcedure}
@@ -420,29 +335,25 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
         />
       )}
 
-      {(isCreatingProcedure || editProcedure) && (
+      {(isCreatingProcedure || editProcedure) && procedureCategory && (
         <ProcedureEditModal
           procedure={editProcedure}
-          defaultCategory={createCategory}
+          defaultCategory={procedureCategory}
           insumos={insumos}
+          insumosMap={insumosMap}
           settings={settings}
           onClose={() => {
             setEditProcedure(null);
             setIsCreatingProcedure(false);
           }}
           onSave={handleSaveProcedure}
-          onQuickCreateInsumo={handleSaveInsumo}
+          onQuickCreateInsumo={(ins) => setInsumos((prev) => [ins, ...prev])}
         />
       )}
 
       {(isCreatingInsumo || editInsumo) && (
         <InsumoModal
           insumo={editInsumo}
-          defaultCategory={
-            activeTab === 'banho_tosa' || activeTab === 'cirurgia' || activeTab === 'internacao'
-              ? activeTab
-              : 'geral'
-          }
           onClose={() => {
             setEditInsumo(null);
             setIsCreatingInsumo(false);
