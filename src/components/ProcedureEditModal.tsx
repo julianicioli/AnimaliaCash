@@ -196,7 +196,7 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
             }`}
           >
             {t.label}
-            {tab === t.id && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-brand-500 rounded-full" />}
+            {tab === t.id && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-accent-500 rounded-full" />}
           </button>
         ))}
       </div>
@@ -417,7 +417,7 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                               placeholder="Adicionar observação"
                               value={item.notes ?? ''}
                               onChange={(e) => updateItem(idx, { notes: e.target.value })}
-                              className="w-full mt-0.5 py-0.5 text-xs text-slate-500 bg-transparent border-0 border-b border-transparent hover:border-slate-200 focus:border-brand-500 focus:outline-none placeholder:text-slate-300"
+                              className="w-full mt-0.5 py-0.5 text-xs text-slate-500 bg-transparent border-0 border-b border-transparent hover:border-slate-200 focus:border-accent-500 focus:outline-none placeholder:text-slate-300"
                             />
                           </td>
                           <td className="px-2 py-2">
@@ -429,7 +429,7 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                                 aria-label={`Quantidade de ${ins?.name ?? item.insumoId}`}
                                 value={item.quantity}
                                 onChange={(e) => updateItem(idx, { quantity: Math.max(0, toNumber(e.target.value)) })}
-                                className="w-full pl-2.5 pr-9 py-1.5 text-sm bg-white border border-slate-300 rounded-md tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
+                                className="w-full pl-2.5 pr-9 py-1.5 text-sm bg-white border border-slate-300 rounded-md tabular-nums focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500"
                               />
                               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
                                 {ins?.unit ?? ''}

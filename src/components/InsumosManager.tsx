@@ -3,6 +3,7 @@ import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { Insumo, Procedure } from '../types';
 import { formatBRL, formatUnitCost, getCategoryDotClass, getCategoryLabel } from '../utils/costCalculations';
 import { primaryButtonClass } from './Modal';
+import { SectionHeader } from './SectionHeader';
 import { CATEGORY_OPTIONS } from './InsumoModal';
 
 interface InsumosManagerProps {
@@ -44,18 +45,16 @@ export const InsumosManager: React.FC<InsumosManagerProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Insumos</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Materiais e medicamentos com custo unitário. Alterar um custo aqui recalcula todos os procedimentos que o utilizam.
-          </p>
-        </div>
-        <button id="btn-add-new-insumo" onClick={onAddInsumo} className={`${primaryButtonClass} shrink-0`}>
-          <Plus className="w-4 h-4" />
-          Novo insumo
-        </button>
-      </div>
+      <SectionHeader
+        section="insumos"
+        description="Materiais e medicamentos com custo unitário. Alterar um custo recalcula todos os procedimentos que o utilizam."
+        action={
+          <button id="btn-add-new-insumo" onClick={onAddInsumo} className={`${primaryButtonClass} shrink-0`}>
+            <Plus className="w-4 h-4" />
+            Novo insumo
+          </button>
+        }
+      />
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="inline-flex max-w-full p-1 bg-slate-200/60 rounded-lg overflow-x-auto self-start">
@@ -80,7 +79,7 @@ export const InsumosManager: React.FC<InsumosManagerProps> = ({
             placeholder="Buscar insumo"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500"
           />
         </div>
       </div>
