@@ -34,12 +34,12 @@ export const ProcedureCard: React.FC<ProcedureCardProps> = ({
   return (
     <div
       id={`card-procedure-${procedure.id}`}
-      className="group relative bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col"
+      className="group relative bg-white rounded-xl border border-slate-200 hover:border-accent-200 hover:shadow-md hover:shadow-accent-100/60 transition-all flex flex-col"
     >
       <button
         type="button"
         onClick={() => onViewDetails(procedure)}
-        className="text-left p-5 flex-1 flex flex-col cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+        className="text-left p-5 flex-1 flex flex-col cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50"
       >
         <h3 className="font-semibold text-slate-900 leading-snug line-clamp-2 pr-16">
           {procedure.name}

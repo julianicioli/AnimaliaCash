@@ -52,7 +52,7 @@ export const Modal: React.FC<ModalProps> = ({
         id={id}
         role="dialog"
         aria-modal="true"
-        className={`bg-white rounded-2xl w-full ${sizeClass[size]} shadow-xl max-h-[92vh] flex flex-col print:max-h-none print:shadow-none`}
+        className={`bg-white rounded-2xl border-t-4 border-accent-500 w-full ${sizeClass[size]} shadow-xl max-h-[92vh] flex flex-col print:max-h-none print:shadow-none`}
       >
         <div className="px-6 pt-5 pb-4 flex items-start justify-between gap-4 border-b border-slate-100">
           <div className="min-w-0">
@@ -85,12 +85,12 @@ export const Modal: React.FC<ModalProps> = ({
 };
 
 export const inputClass =
-  'w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500';
+  'w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500';
 
 export const labelClass = 'block text-sm font-medium text-slate-700 mb-1.5';
 
 export const primaryButtonClass =
-  'inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed';
+  'inline-flex items-center justify-center gap-2 px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed';
 
 export const secondaryButtonClass =
   'inline-flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg border border-slate-300 transition-colors cursor-pointer';

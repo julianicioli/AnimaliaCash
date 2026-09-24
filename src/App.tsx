@@ -9,6 +9,7 @@ import { ProcedureEditModal } from './components/ProcedureEditModal';
 import { InsumosManager } from './components/InsumosManager';
 import { InsumoModal } from './components/InsumoModal';
 import { SettingsPage } from './components/SettingsPage';
+import { SectionHeader } from './components/SectionHeader';
 import { primaryButtonClass } from './components/Modal';
 import { matchesWeightRange, WEIGHT_RANGES, WeightRange } from './utils/costCalculations';
 
@@ -16,19 +17,16 @@ interface AppProps {
   initialTab?: ActiveTab;
 }
 
-const CATEGORY_HEADER: Record<ProcedureCategory, { title: string; description: string; newLabel: string }> = {
+const CATEGORY_HEADER: Record<ProcedureCategory, { description: string; newLabel: string }> = {
   banho_tosa: {
-    title: 'Banho & Tosa',
     description: 'Custo de cada serviço por porte do animal.',
     newLabel: 'Novo banho & tosa',
   },
   cirurgia: {
-    title: 'Cirurgias',
     description: 'Custo de cada cirurgia por peso do paciente, incluindo anestesia e comissão.',
     newLabel: 'Nova cirurgia',
   },
   internacao: {
-    title: 'Internação',
     description: 'Custo das diárias de internação por porte do animal.',
     newLabel: 'Nova diária',
   },
@@ -190,7 +188,7 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
   const isFiltering = weightRange !== 'todos' || searchTerm.trim() !== '';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
+    <div data-section={activeTab} className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
       <Navbar
         activeTab={activeTab}
         onSelectTab={(tab) => {
@@ -204,20 +202,20 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {procedureCategory && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">{CATEGORY_HEADER[procedureCategory].title}</h1>
-                <p className="text-sm text-slate-500 mt-1">{CATEGORY_HEADER[procedureCategory].description}</p>
-              </div>
-              <button
-                id={`btn-new-procedure-${activeTab}`}
-                onClick={() => setIsCreatingProcedure(true)}
-                className={`${primaryButtonClass} shrink-0`}
-              >
-                <Plus className="w-4 h-4" />
-                {CATEGORY_HEADER[procedureCategory].newLabel}
-              </button>
-            </div>
+            <SectionHeader
+              section={procedureCategory}
+              description={CATEGORY_HEADER[procedureCategory].description}
+              action={
+                <button
+                  id={`btn-new-procedure-${activeTab}`}
+                  onClick={() => setIsCreatingProcedure(true)}
+                  className={`${primaryButtonClass} shrink-0`}
+                >
+                  <Plus className="w-4 h-4" />
+                  {CATEGORY_HEADER[procedureCategory].newLabel}
+                </button>
+              }
+            />
 
             {/* Filtros */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -245,7 +243,7 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
                   placeholder="Buscar procedimento"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
+                  className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500"
                 />
                 {searchTerm && (
                   <button
@@ -293,7 +291,7 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
                       setWeightRange('todos');
                       setSearchTerm('');
                     }}
-                    className="mt-4 text-sm font-semibold text-brand-700 hover:underline cursor-pointer"
+                    className="mt-4 text-sm font-semibold text-accent-700 hover:underline cursor-pointer"
                   >
                     Limpar filtros
                   </button>

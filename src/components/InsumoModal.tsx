@@ -164,7 +164,7 @@ export const InsumoModal: React.FC<InsumoModalProps> = ({ insumo, onClose, onSav
               type="checkbox"
               checked={usePackageCalc}
               onChange={(e) => setUsePackageCalc(e.target.checked)}
-              className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              className="rounded border-slate-300 text-accent-600 focus:ring-accent-500"
             />
             Calcular a partir do preço da embalagem
           </label>

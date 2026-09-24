@@ -27,7 +27,7 @@ export const ProcedureDetailModal: React.FC<ProcedureDetailModalProps> = ({
     : `${formatDecimal(procedure.vetCommissionValue ?? getDefaultCommissionPercent(procedure.category, settings))}% ${procedure.suggestedPrice ? 'do preço' : 'do custo'}`;
 
   const composition = [
-    { label: 'Insumos', detail: `${calc.itemsCount} itens`, value: breakdown.directCost, color: 'bg-brand-500' },
+    { label: 'Insumos', detail: `${calc.itemsCount} itens`, value: breakdown.directCost, color: 'bg-accent-500' },
     ...(procedure.category === 'cirurgia'
       ? [{ label: 'Anestesia', detail: 'terceirizada', value: breakdown.anesthesiaCost, color: 'bg-sky-500' }]
       : []),
