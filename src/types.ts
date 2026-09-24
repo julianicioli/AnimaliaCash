@@ -39,7 +39,8 @@ export interface Procedure {
   category: ProcedureCategory;
   description: string;
   targetWeightKg?: number; // Peso do animal em kg (ex: 5, 10, 15, 20, 30, 40)
-  durationMinutes: number; // Tempo médio do procedimento em minutos
+  durationMinutes: number; // Tempo médio do procedimento em minutos (na internação, o período total)
+  laborMinutes?: number; // Tempo de atendimento que entra no custo operacional (padrão: durationMinutes)
   anesthesiaCost?: number; // Custo do anestesista terceirizado lançado automaticamente
   vetCommissionType?: 'percent' | 'fixed'; // Tipo de comissão do veterinário (% ou R$ fixo)
   vetCommissionValue?: number; // Valor da comissão (% sobre o preço ou valor em R$)
@@ -53,15 +54,12 @@ export interface Procedure {
 export interface ClinicSettings {
   projectName?: string; // Nome principal do projeto/aplicativo (ex: VetCusto)
   clinicName: string; // Nome da clínica/unidade
-  tagline?: string; // Subtítulo / slogan (ex: Gestão de Custos)
   logoUrl?: string; // URL ou base64 da logo personalizada
   hourlyOperationalRate: number; // Custo por hora de funcionamento da clínica/mão de obra (R$/hora)
   defaultAnesthesiaCost?: number; // Custo padrão pré-lançado do anestesista terceirizado (ex: R$ 250)
   defaultVetCommissionSurgeryPercent?: number; // Comissão padrão do cirurgião (% ex: 25%)
   defaultVetCommissionInternmentPercent?: number; // Comissão padrão do plantonista/internista (% ex: 20%)
   defaultVetCommissionBathPercent?: number; // Comissão padrão do tosador/banhista (% ex: 15%)
-  kwhCost: number; // Preço do kWh em R$ (ex: 0.95)
-  waterLiterCost: number; // Preço por litro de água em R$ (ex: 0.015)
   includeLaborInCost: boolean;
 }
 

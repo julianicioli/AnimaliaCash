@@ -1,16 +1,9 @@
-import React, { useState } from 'react';
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  Edit3, 
-  Trash2, 
-  Layers, 
-  Info,
-  CheckCircle2
-} from 'lucide-react';
-import { Insumo, InsumoCategory, Procedure } from '../types';
-import { formatBRL, getCategoryBadge, getCategoryLabel } from '../utils/costCalculations';
+import React, { useMemo, useState } from 'react';
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Insumo, Procedure } from '../types';
+import { formatBRL, formatUnitCost, getCategoryDotClass, getCategoryLabel } from '../utils/costCalculations';
+import { primaryButtonClass } from './Modal';
+import { CATEGORY_OPTIONS } from './InsumoModal';
 
 interface InsumosManagerProps {
   insumos: Insumo[];
@@ -30,176 +23,134 @@ export const InsumosManager: React.FC<InsumosManagerProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('todos');
 
-  // Conta quantos procedimentos usam cada insumo
-  const usageCountMap = new Map<string, number>();
-  procedures.forEach((p) => {
-    p.items.forEach((it) => {
-      usageCountMap.set(it.insumoId, (usageCountMap.get(it.insumoId) || 0) + 1);
+  // Quantos procedimentos usam cada insumo
+  const usageCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    procedures.forEach((p) => {
+      new Set(p.items.map((it) => it.insumoId)).forEach((id) => map.set(id, (map.get(id) || 0) + 1));
     });
-  });
+    return map;
+  }, [procedures]);
 
-  const filteredInsumos = insumos.filter((ins) => {
-    const matchesSearch = ins.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (ins.notes && ins.notes.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = filterCategory === 'todos' || ins.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredInsumos = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return insumos
+      .filter((ins) => filterCategory === 'todos' || ins.category === filterCategory)
+      .filter((ins) => !q || ins.name.toLowerCase().includes(q) || (ins.notes ?? '').toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [insumos, searchTerm, filterCategory]);
+
+  const filters = [{ value: 'todos', label: 'Todos' }, ...CATEGORY_OPTIONS];
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center">
-              <Package className="w-4 h-4" />
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-900">
-              Catálogo de Insumos & Materiais
-            </h2>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Cadastre lâminas, luvas, fios de sutura, shampoos, anestésicos e materiais descartáveis com seus custos unitários.
+          <h1 className="text-2xl font-bold text-slate-900">Insumos</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Materiais e medicamentos com custo unitário. Alterar um custo aqui recalcula todos os procedimentos que o utilizam.
           </p>
         </div>
-
-        <button
-          id="btn-add-new-insumo"
-          onClick={onAddInsumo}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold rounded-xl shadow-xs transition-colors shrink-0"
-        >
+        <button id="btn-add-new-insumo" onClick={onAddInsumo} className={`${primaryButtonClass} shrink-0`}>
           <Plus className="w-4 h-4" />
-          Cadastrar Insumo
+          Novo insumo
         </button>
       </div>
 
-      {/* Info Tip */}
-      <div className="p-4 bg-teal-50/60 border border-teal-200 rounded-xl flex items-start gap-3 text-xs text-teal-900">
-        <Info className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
-        <div>
-          <strong>Cálculo Automático Interligado:</strong> Quando você atualiza o custo de compra de um insumo aqui (por exemplo, se o preço do shampoo ou do fio de sutura subir), todos os procedimentos de Banho e Tosa, Cirurgias ou Internação que utilizam esse material têm seus custos e margens recalculados instantaneamente.
-        </div>
-      </div>
-
-      {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input
-            id="input-search-insumos"
-            type="text"
-            placeholder="Buscar por nome (ex: bisturi, vicryl, shampoo, ringer)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-xs"
-          />
-        </div>
-
-        {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {[
-            { id: 'todos', label: 'Todos' },
-            { id: 'banho_tosa', label: 'Banho & Tosa' },
-            { id: 'cirurgia', label: 'Cirurgias' },
-            { id: 'internacao', label: 'Internação' },
-            { id: 'geral', label: 'Gerais' },
-          ].map((cat) => (
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="inline-flex max-w-full p-1 bg-slate-200/60 rounded-lg overflow-x-auto self-start">
+          {filters.map((cat) => (
             <button
-              key={cat.id}
-              onClick={() => setFilterCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                filterCategory === cat.id
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              key={cat.value}
+              onClick={() => setFilterCategory(cat.value)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                filterCategory === cat.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               {cat.label}
             </button>
           ))}
         </div>
+
+        <div className="relative w-full md:w-72">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            id="input-search-insumos"
+            type="text"
+            placeholder="Buscar insumo"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
+          />
+        </div>
       </div>
 
-      {/* Insumos Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-xs sm:text-sm">
-            <thead className="bg-slate-50 text-slate-600 font-semibold text-[11px] uppercase tracking-wider">
-              <tr>
-                <th className="px-4 py-3.5">Nome do Material / Insumo</th>
-                <th className="px-3 py-3.5">Categoria</th>
-                <th className="px-3 py-3.5 text-center">Unidade</th>
-                <th className="px-4 py-3.5 text-right">Custo Unitário</th>
-                <th className="px-3 py-3.5 text-center">Procedimentos</th>
-                <th className="px-4 py-3.5 text-right">Ações</th>
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr className="text-left text-xs text-slate-500">
+                <th className="px-5 py-3 font-medium">Nome</th>
+                <th className="px-4 py-3 font-medium">Categoria</th>
+                <th className="px-4 py-3 font-medium text-right">Custo unitário</th>
+                <th className="px-4 py-3 font-medium text-right">Usado em</th>
+                <th className="w-24" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {filteredInsumos.length > 0 ? (
-                filteredInsumos.map((ins) => {
-                  const badge = getCategoryBadge(ins.category);
-                  const usageCount = usageCountMap.get(ins.id) || 0;
-
-                  return (
-                    <tr key={ins.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="font-bold text-slate-900">
-                          {ins.name}
-                        </div>
-                        {ins.notes && (
-                          <div className="text-xs text-slate-500 font-normal">
-                            {ins.notes}
-                          </div>
-                        )}
-                        {ins.packagePrice && ins.packageSize && (
-                          <div className="text-[11px] text-teal-700 font-medium">
-                            Comprado a {formatBRL(ins.packagePrice)} por {ins.packageSize} {ins.unit}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${badge.bg} ${badge.text} ${badge.border}`}>
-                          {getCategoryLabel(ins.category)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-center font-medium text-slate-600 whitespace-nowrap">
-                        {ins.unit}
-                      </td>
-                      <td className="px-4 py-3 text-right font-extrabold text-slate-900 whitespace-nowrap">
-                        {formatBRL(ins.costPerUnit)} <span className="text-xs text-slate-400 font-normal">/ {ins.unit}</span>
-                      </td>
-                      <td className="px-3 py-3 text-center whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold">
-                          <Layers className="w-3 h-3 text-slate-400" />
-                          {usageCount} {usageCount === 1 ? 'uso' : 'usos'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1">
-                          <button
-                            id={`btn-edit-insumo-${ins.id}`}
-                            onClick={() => onEditInsumo(ins)}
-                            title="Editar insumo"
-                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            id={`btn-delete-insumo-${ins.id}`}
-                            onClick={() => onDeleteInsumo(ins.id)}
-                            title="Excluir insumo"
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
+            <tbody className="divide-y divide-slate-100">
+              {filteredInsumos.map((ins) => {
+                const usageCount = usageCountMap.get(ins.id) || 0;
+                return (
+                  <tr key={ins.id} className="group hover:bg-slate-50/70">
+                    <td className="px-5 py-3">
+                      <div className="font-medium text-slate-900">{ins.name}</div>
+                      {ins.notes && <div className="text-xs text-slate-500 mt-0.5">{ins.notes}</div>}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-2 text-slate-600">
+                        <span className={`w-2 h-2 rounded-full ${getCategoryDotClass(ins.category)}`} />
+                        {getCategoryLabel(ins.category)}
+                      </span>
+                    </td>
+                    <td
+                      className="px-4 py-3 text-right whitespace-nowrap tabular-nums"
+                      title={ins.packagePrice && ins.packageSize ? `Embalagem: ${formatBRL(ins.packagePrice)} por ${ins.packageSize} ${ins.unit}` : undefined}
+                    >
+                      <span className="font-medium text-slate-900">{formatUnitCost(ins.costPerUnit)}</span>
+                      <span className="text-slate-400"> / {ins.unit}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-600 whitespace-nowrap tabular-nums">
+                      {usageCount === 0 ? <span className="text-slate-400">—</span> : `${usageCount} ${usageCount === 1 ? 'procedimento' : 'procedimentos'}`}
+                    </td>
+                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
+                        <button
+                          id={`btn-edit-insumo-${ins.id}`}
+                          onClick={() => onEditInsumo(ins)}
+                          title="Editar"
+                          aria-label={`Editar ${ins.name}`}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md cursor-pointer"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          id={`btn-delete-insumo-${ins.id}`}
+                          onClick={() => onDeleteInsumo(ins.id)}
+                          title="Excluir"
+                          aria-label={`Excluir ${ins.name}`}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredInsumos.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
-                    Nenhum insumo encontrado para este filtro ou busca.
+                  <td colSpan={5} className="px-5 py-12 text-center text-slate-500">
+                    Nenhum insumo encontrado.
                   </td>
                 </tr>
               )}

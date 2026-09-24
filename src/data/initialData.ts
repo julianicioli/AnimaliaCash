@@ -4,15 +4,12 @@ import { commonVeterinarySurgeries } from './veterinarySurgeries';
 export const initialClinicSettings: ClinicSettings = {
   projectName: 'Animalia Cash',
   clinicName: 'Clínica Veterinária Vida Animal',
-  tagline: '',
   logoUrl: '/logo.jpg',
   hourlyOperationalRate: 45.0, // Custo médio de mão de obra/hora operacional ou rateio fixo (energia, água, sala, equipe de apoio)
   defaultAnesthesiaCost: 250.0, // Custo padrão fixo do anestesista terceirizado (lançado automaticamente)
   defaultVetCommissionSurgeryPercent: 25.0, // Comissão padrão do cirurgião veterinário (% sobre o procedimento)
   defaultVetCommissionInternmentPercent: 20.0, // Comissão padrão do veterinário plantonista/internista (%)
   defaultVetCommissionBathPercent: 15.0, // Comissão padrão do tosador/banhista (%)
-  kwhCost: 0.98, // R$/kWh de energia elétrica
-  waterLiterCost: 0.018, // R$ por litro de água
   includeLaborInCost: true,
 };
 
@@ -449,6 +446,16 @@ export const initialInsumos: Insumo[] = [
     notes: 'Hidratação contínua e reposição hidroeletrolítica',
   },
   {
+    id: 'int_soro_fisiologico',
+    name: 'Bolsa de Soro Fisiológico 0,9% 500ml',
+    category: 'internacao',
+    unit: 'un',
+    costPerUnit: 7.9,
+    packagePrice: 158.0,
+    packageSize: 20,
+    notes: 'Diluição de fármacos em infusão contínua',
+  },
+  {
     id: 'int_luvas_procedimento',
     name: 'Luvas de Procedimento Não Cirúrgicas (Par)',
     category: 'internacao',
@@ -515,7 +522,7 @@ export const initialProcedures: Procedure[] = [
   // 1. Banho Cão Pequeno (até 10 kg)
   {
     id: 'bt_10kg_pequeno',
-    name: 'Banho & Secagem - Cão Pequeno (até 10 kg)',
+    name: 'Banho & Secagem',
     category: 'banho_tosa',
     targetWeightKg: 10,
     description: 'Pré-definido para animais até 10 kg (ex: Shih Tzu, Maltês, Spitz, Yorkshire). Consumo de 35L de água, 60ml shampoo, 1.8 kWh de energia e 1 toalha.',
@@ -538,7 +545,7 @@ export const initialProcedures: Procedure[] = [
   // 2. Banho Cão 20 kg (Porte Médio) - SOLICITADO ESPECIFICAMENTE
   {
     id: 'bt_20kg_medio',
-    name: 'Banho & Secagem - Cão 20 kg (Porte Médio)',
+    name: 'Banho & Secagem',
     category: 'banho_tosa',
     targetWeightKg: 20,
     description: 'Pré-definido para cães de 20 kg (ex: Cocker, Beagle, Schnauzer, Border Collie médio). Consumo de 55L de água, 110ml shampoo, 2.8 kWh energia e 2 toalhas.',
@@ -561,7 +568,7 @@ export const initialProcedures: Procedure[] = [
   // 3. Banho Cão 30 kg (Porte Grande) - SOLICITADO ESPECIFICAMENTE
   {
     id: 'bt_30kg_grande',
-    name: 'Banho & Secagem - Cão 30 kg (Porte Grande)',
+    name: 'Banho & Secagem',
     category: 'banho_tosa',
     targetWeightKg: 30,
     description: 'Pré-definido para cães de 30 kg (ex: Golden Retriever, Labrador, Boxer, Boxer, Pastor). Consumo de 80L de água, 160ml shampoo, 4.2 kWh energia para secagem profunda e 3 toalhas.',
@@ -584,7 +591,7 @@ export const initialProcedures: Procedure[] = [
   // 4. Banho Cão 40 kg+ (Porte Gigante)
   {
     id: 'bt_40kg_gigante',
-    name: 'Banho & Secagem - Cão 40 kg+ (Porte Gigante)',
+    name: 'Banho & Secagem',
     category: 'banho_tosa',
     targetWeightKg: 40,
     description: 'Pré-definido para cães de 40 kg+ (ex: Bernese, Rottweiler, Dogue Alemão, Terra Nova). Alto consumo de 110L de água, 220ml shampoo, 5.8 kWh energia e 4 toalhas.',
@@ -607,7 +614,7 @@ export const initialProcedures: Procedure[] = [
   // 5. Banho & Tosa Geral c/ Tesoura - Cão 20 kg
   {
     id: 'bt_tosa_20kg',
-    name: 'Banho & Tosa Geral c/ Acabamento em Tesoura - 20 kg',
+    name: 'Banho & Tosa com Acabamento em Tesoura',
     category: 'banho_tosa',
     targetWeightKg: 20,
     description: 'Banho completo, tosa higiênica, tosa de máquina e tesoura em cão médio de 20 kg. Inclui desgaste de lâminas de corte.',
@@ -635,11 +642,12 @@ export const initialProcedures: Procedure[] = [
   // 1. Diária Cão Pequeno (até 10 kg)
   {
     id: 'int_10kg_pequeno',
-    name: 'Diária de Internação c/ Fluidoterapia - Cão Pequeno (até 10 kg)',
+    name: 'Diária de Internação com Fluidoterapia',
     category: 'internacao',
     targetWeightKg: 10,
     description: 'Pré-definido para pacientes até 10 kg em leito hospitalar. Consumo de 1 bolsa de soro 500ml, 2 tapetes higiênicos, cateter 22G, seringas e 6 trocas de luvas de procedimento.',
-    durationMinutes: 120,
+    durationMinutes: 1440, // 1 diária
+    laborMinutes: 120, // tempo de atendimento da equipe
     targetMarginPercent: 55,
     suggestedPrice: 220.0,
     items: [
@@ -658,11 +666,12 @@ export const initialProcedures: Procedure[] = [
   // 2. Diária Cão 20 kg (Porte Médio) - SOLICITADO ESPECIFICAMENTE
   {
     id: 'int_20kg_medio',
-    name: 'Diária de Internação c/ Fluidoterapia - Cão 20 kg (Porte Médio)',
+    name: 'Diária de Internação com Fluidoterapia',
     category: 'internacao',
     targetWeightKg: 20,
     description: 'Pré-definido para pacientes de 20 kg. Consumo estimado de 1000ml de fluidoterapia (2 bolsas de soro Ringer Lactato), 4 tapetes higiênicos devido à maior diurese, cateter 20G, 8 luvas de procedimento e medicações.',
-    durationMinutes: 160,
+    durationMinutes: 1440, // 1 diária
+    laborMinutes: 160, // tempo de atendimento da equipe
     targetMarginPercent: 55,
     suggestedPrice: 320.0,
     items: [
@@ -681,11 +690,12 @@ export const initialProcedures: Procedure[] = [
   // 3. Diária Cão 30 kg (Porte Grande) - SOLICITADO ESPECIFICAMENTE
   {
     id: 'int_30kg_grande',
-    name: 'Diária de Internação c/ Fluidoterapia - Cão 30 kg (Porte Grande)',
+    name: 'Diária de Internação com Fluidoterapia',
     category: 'internacao',
     targetWeightKg: 30,
     description: 'Pré-definido para pacientes de 30 kg. Consumo de 1500ml de soro (3 bolsas), 5 tapetes higiênicos de alta capacidade, cateter 20G, 10 pares de luvas para checagem frequente e medicações.',
-    durationMinutes: 180,
+    durationMinutes: 1440, // 1 diária
+    laborMinutes: 180, // tempo de atendimento da equipe
     targetMarginPercent: 55,
     suggestedPrice: 420.0,
     items: [
@@ -704,11 +714,12 @@ export const initialProcedures: Procedure[] = [
   // 4. Diária Cão 40 kg+ (Porte Gigante)
   {
     id: 'int_40kg_gigante',
-    name: 'Diária de Internação c/ Fluidoterapia - Cão 40 kg+ (Porte Gigante)',
+    name: 'Diária de Internação com Fluidoterapia',
     category: 'internacao',
     targetWeightKg: 40,
     description: 'Pré-definido para cães gigantes acima de 40 kg. Consumo de 2000ml de soro (4 bolsas), 6 tapetes higiênicos, cateter 18G/20G, 12 pares de luvas e suporte intensivo.',
-    durationMinutes: 200,
+    durationMinutes: 1440, // 1 diária
+    laborMinutes: 200, // tempo de atendimento da equipe
     targetMarginPercent: 55,
     suggestedPrice: 520.0,
     items: [
@@ -727,11 +738,12 @@ export const initialProcedures: Procedure[] = [
   // 5. Diária Crítica / Semi-UTI com Oxigenoterapia
   {
     id: 'int_critica_uti',
-    name: 'Diária de Internação Crítica / Semi-UTI c/ Oxigênio',
+    name: 'Diária Semi-UTI com Oxigênio',
     category: 'internacao',
     targetWeightKg: 20,
     description: 'Pacientes graves com oxigenoterapia (6h), monitoramento intensivo contínuo, 2 linhas venosas, alimentação especial Recovery e desinfecção hospitalar.',
-    durationMinutes: 300,
+    durationMinutes: 1440, // 1 diária
+    laborMinutes: 300, // tempo de atendimento da equipe
     targetMarginPercent: 60,
     suggestedPrice: 680.0,
     items: [

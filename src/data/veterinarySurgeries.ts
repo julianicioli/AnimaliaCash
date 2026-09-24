@@ -4,7 +4,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 1. Castração Fêmea Canina (OSH) - Pequeno Porte (até 10 kg)
   {
     id: 'cir_castracao_cadela_pequena',
-    name: 'Castração de Fêmea Canina (OSH) - Pequeno Porte (até 10 kg)',
+    name: 'Castração Fêmea Canina (OSH)',
     category: 'cirurgia',
     targetWeightKg: 8,
     durationMinutes: 50,
@@ -36,7 +36,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 2. Castração Fêmea Canina (OSH) - Porte Médio (10 a 20 kg)
   {
     id: 'cir_castracao_cadela_media',
-    name: 'Castração de Fêmea Canina (OSH) - Porte Médio (10 a 20 kg)',
+    name: 'Castração Fêmea Canina (OSH)',
     category: 'cirurgia',
     targetWeightKg: 18,
     durationMinutes: 70,
@@ -69,7 +69,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 3. Castração Fêmea Canina (OSH) - Porte Grande (20 a 35 kg)
   {
     id: 'cir_castracao_cadela_grande',
-    name: 'Castração de Fêmea Canina (OSH) - Porte Grande (20 a 35 kg)',
+    name: 'Castração Fêmea Canina (OSH)',
     category: 'cirurgia',
     targetWeightKg: 30,
     durationMinutes: 90,
@@ -102,7 +102,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 4. Castração Fêmea Canina (OSH) - Porte Gigante (40 kg+)
   {
     id: 'cir_castracao_cadela_gigante',
-    name: 'Castração de Fêmea Canina (OSH) - Porte Gigante (40 kg+)',
+    name: 'Castração Fêmea Canina (OSH)',
     category: 'cirurgia',
     targetWeightKg: 45,
     durationMinutes: 110,
@@ -135,7 +135,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 5. Castração Macho Canino (Orquiectomia) - Porte Pequeno (até 10 kg)
   {
     id: 'cir_castracao_macho_pequeno',
-    name: 'Castração de Macho Canino (Orquiectomia) - Porte Pequeno (até 10 kg)',
+    name: 'Castração Macho Canino (Orquiectomia)',
     category: 'cirurgia',
     targetWeightKg: 8,
     durationMinutes: 40,
@@ -167,7 +167,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 6. Castração Macho Canino (Orquiectomia) - Porte Médio e Grande (15 a 35 kg)
   {
     id: 'cir_castracao_macho_medio_grande',
-    name: 'Castração de Macho Canino (Orquiectomia) - Porte Médio a Grande (15 a 35 kg)',
+    name: 'Castração Macho Canino (Orquiectomia)',
     category: 'cirurgia',
     targetWeightKg: 25,
     durationMinutes: 50,
@@ -199,7 +199,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 7. Castração Fêmea Felina (OSH Gata)
   {
     id: 'cir_castracao_femea_felina',
-    name: 'Castração de Fêmea Felina (OSH Gata)',
+    name: 'Castração Fêmea Felina (OSH)',
     category: 'cirurgia',
     targetWeightKg: 4,
     durationMinutes: 40,
@@ -231,7 +231,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 8. Castração Macho Felino (Orquiectomia Gato)
   {
     id: 'cir_castracao_macho_felino',
-    name: 'Castração de Macho Felino (Orquiectomia Gato)',
+    name: 'Castração Macho Felino (Orquiectomia)',
     category: 'cirurgia',
     targetWeightKg: 4,
     durationMinutes: 25,
@@ -257,7 +257,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 9. Cesariana de Emergência / Eletiva com Reanimação Fetal
   {
     id: 'cir_cesariana_emergencia',
-    name: 'Cesariana de Urgência / Eletiva com Reanimação Fetal',
+    name: 'Cesariana',
     category: 'cirurgia',
     targetWeightKg: 15,
     durationMinutes: 90,
@@ -289,7 +289,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 10. Piometra de Urgência (OSH Terapêutica de Risco)
   {
     id: 'cir_piometra_urgencia',
-    name: 'Cirurgia de Piometra de Urgência (OSH Terapêutica)',
+    name: 'Piometra (OSH Terapêutica)',
     category: 'cirurgia',
     targetWeightKg: 18,
     durationMinutes: 90,
@@ -322,7 +322,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 11. Mastectomia Unilateral Total com Linfonodectomia
   {
     id: 'cir_mastectomia_unilateral',
-    name: 'Mastectomia Unilateral Total com Linfonodectomia (Tumor Mamário)',
+    name: 'Mastectomia Unilateral Total',
     category: 'cirurgia',
     targetWeightKg: 16,
     durationMinutes: 100,
@@ -355,7 +355,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 12. Mastectomia Parcial / Bilateral (Nódulos Mamários)
   {
     id: 'cir_mastectomia_parcial',
-    name: 'Mastectomia Parcial / Retirada de Nódulos Mamários',
+    name: 'Mastectomia Parcial / Nodulectomia',
     category: 'cirurgia',
     targetWeightKg: 14,
     durationMinutes: 75,
@@ -387,7 +387,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 13. Tartarectomia e Profilaxia Dentária com Polimento sob Anestesia
   {
     id: 'cir_tartarectomia_profilaxia',
-    name: 'Tartarectomia e Profilaxia Dentária com Polimento sob Anestesia Geral',
+    name: 'Tartarectomia (Profilaxia Dentária)',
     category: 'cirurgia',
     targetWeightKg: 12,
     durationMinutes: 60,
@@ -412,7 +412,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 14. Extração Dentária Cirúrgica / Odontossecção de Molares e Caninos
   {
     id: 'cir_extracao_dentaria',
-    name: 'Extração Dentária Cirúrgica / Odontossecção (Dentes Molares / Caninos)',
+    name: 'Extração Dentária Cirúrgica',
     category: 'cirurgia',
     targetWeightKg: 15,
     durationMinutes: 80,
@@ -441,7 +441,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 15. Enterotomia / Gastrotomia para Remoção de Corpo Estranho
   {
     id: 'cir_enterotomia_corpo_estranho',
-    name: 'Enterotomia / Gastrotomia (Remoção de Corpo Estranho Gastrintestinal)',
+    name: 'Enterotomia / Gastrotomia (Corpo Estranho)',
     category: 'cirurgia',
     targetWeightKg: 20,
     durationMinutes: 100,
@@ -474,7 +474,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 16. Cistotomia (Remoção de Cálculos Vesicais / Urólitos)
   {
     id: 'cir_cistotomia_calculos',
-    name: 'Cistotomia (Remoção de Cálculos Vesicais / Urólitos)',
+    name: 'Cistotomia (Cálculos Vesicais)',
     category: 'cirurgia',
     targetWeightKg: 15,
     durationMinutes: 80,
@@ -509,7 +509,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 17. Exérese de Nódulo / Neoplasia Cutânea com Margem Oncológica
   {
     id: 'cir_exerese_nodulo_cutaneo',
-    name: 'Exérese de Nódulo / Neoplasia Cutânea com Margem Oncológica',
+    name: 'Exérese de Nódulo Cutâneo',
     category: 'cirurgia',
     targetWeightKg: 15,
     durationMinutes: 60,
@@ -573,7 +573,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 19. Otoematoma (Drenagem e Fixação com Capitonagem)
   {
     id: 'cir_otoematoma',
-    name: 'Cirurgia de Otoematoma (Drenagem e Sutura com Capitonagem)',
+    name: 'Otoematoma (Drenagem e Capitonagem)',
     category: 'cirurgia',
     targetWeightKg: 20,
     durationMinutes: 50,
@@ -604,7 +604,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 20. Enucleação de Bulbo Ocular (Glaucoma / Trauma Grave)
   {
     id: 'cir_enucleacao_ocular',
-    name: 'Enucleação de Bulbo Ocular (Glaucoma / Trauma Grave Irreversível)',
+    name: 'Enucleação Ocular',
     category: 'cirurgia',
     targetWeightKg: 15,
     durationMinutes: 75,
@@ -672,7 +672,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 22. Ortopedia: Redução e Osteossíntese de Fratura com Placa e Parafusos
   {
     id: 'cir_osteossintese_placa',
-    name: 'Ortopedia: Redução e Osteossíntese de Fratura com Placa e Parafusos',
+    name: 'Osteossíntese de Fratura (Placa e Parafusos)',
     category: 'cirurgia',
     targetWeightKg: 20,
     durationMinutes: 120,
@@ -706,7 +706,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 23. Sutura e Debridamento de Ferida Extensa / Laceração Traumática
   {
     id: 'cir_debridamento_ferida',
-    name: 'Sutura e Debridamento de Ferida Extensa / Laceração Traumática',
+    name: 'Sutura e Debridamento de Ferida',
     category: 'cirurgia',
     targetWeightKg: 18,
     durationMinutes: 60,
@@ -740,7 +740,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 24. Uretrostomia Perineal Felina (Desobstrução Cirúrgica em Felinos)
   {
     id: 'cir_uretrostomia_felina',
-    name: 'Uretrostomia Perineal Felina (Desobstrução Cirúrgica de Gatos)',
+    name: 'Uretrostomia Perineal Felina',
     category: 'cirurgia',
     targetWeightKg: 4.5,
     durationMinutes: 75,
@@ -772,7 +772,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 25. Correção de Entrópio / Blefaroplastia Palpebral
   {
     id: 'cir_entropio_blefaroplastia',
-    name: 'Correção de Entrópio / Blefaroplastia Palpebral (Hotz-Celsus)',
+    name: 'Correção de Entrópio (Blefaroplastia)',
     category: 'cirurgia',
     targetWeightKg: 25,
     durationMinutes: 60,
@@ -801,7 +801,7 @@ export const commonVeterinarySurgeries: Procedure[] = [
   // 26. Drenagem Torácica / Toracocentese com Dreno de Tórax
   {
     id: 'cir_drenagem_toracica',
-    name: 'Toracotomia Exploratória / Implantação de Dreno Torácico',
+    name: 'Toracotomia Exploratória',
     category: 'cirurgia',
     targetWeightKg: 20,
     durationMinutes: 75,
