@@ -28,7 +28,7 @@ export const ProcedureDetailModal: React.FC<ProcedureDetailModalProps> = ({
 
   const composition = [
     { label: 'Insumos', detail: `${calc.itemsCount} itens`, value: breakdown.directCost, color: 'bg-accent-500' },
-    ...(procedure.category === 'cirurgia'
+    ...(breakdown.anesthesiaCost > 0
       ? [{ label: 'Anestesia', detail: 'terceirizada', value: breakdown.anesthesiaCost, color: 'bg-sky-500' }]
       : []),
     {

@@ -71,11 +71,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onSave, on
             </label>
           </Section>
 
-          <Section title="Anestesia" description="Valor já lançado em cada nova cirurgia. Pode ser alterado individualmente.">
+          <Section title="Anestesia" description="Valor sugerido ao ativar o anestesista terceirizado em uma cirurgia.">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <MoneyField
                 id="input-default-anesthesia"
-                label="Anestesista terceirizado"
+                label="Valor padrão do anestesista"
                 value={form.defaultAnesthesiaCost ?? 0}
                 onChange={(v) => update('defaultAnesthesiaCost', v)}
               />

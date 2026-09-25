@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Search, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { ClinicSettings, Insumo, Procedure, ProcedureCategory, ProcedureItem, UnitType } from '../types';
-import { calculateProcedure, formatBRL, formatUnitCost, getDefaultCommissionPercent } from '../utils/costCalculations';
+import { calculateProcedure, formatBRL, formatDecimal, formatUnitCost, getCategoryLabel, getDefaultCommissionPercent } from '../utils/costCalculations';
 import { Modal, inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from './Modal';
 import { UNIT_OPTIONS } from './InsumoModal';
 
@@ -82,8 +82,13 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
   const [description, setDescription] = useState(procedure?.description ?? '');
 
   // Custos
+  // A clínica não tem anestesista próprio: ele é contratado por fora quando necessário.
+  // Cirurgia nova começa sem anestesista; existente mantém o que tinha.
+  const [hasAnesthetist, setHasAnesthetist] = useState<boolean>(
+    procedure ? (procedure.anesthesiaCost ?? settings.defaultAnesthesiaCost ?? 0) > 0 : false
+  );
   const [anesthesiaCost, setAnesthesiaCost] = useState<number>(
-    procedure?.anesthesiaCost ?? settings.defaultAnesthesiaCost ?? 250
+    procedure?.anesthesiaCost || settings.defaultAnesthesiaCost || 250
   );
   const [vetCommissionType, setVetCommissionType] = useState<'percent' | 'fixed'>(procedure?.vetCommissionType ?? 'percent');
   const [vetCommissionValue, setVetCommissionValue] = useState<number>(
@@ -95,7 +100,6 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
   // Insumos: cópia própria dos itens, para que "Cancelar" não altere o procedimento original
   const [items, setItems] = useState<ProcedureItem[]>(() => (procedure?.items ?? []).map((i) => ({ ...i })));
   const [insumoSearch, setInsumoSearch] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
 
   const autoName = getAutoName(category, targetWeightKg);
@@ -110,7 +114,7 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
     targetWeightKg: targetWeightKg && targetWeightKg > 0 ? targetWeightKg : undefined,
     durationMinutes: Math.max(1, Math.round(durationMinutes)),
     laborMinutes: category === 'internacao' ? Math.max(0, laborMinutes) : procedure?.laborMinutes,
-    anesthesiaCost: category === 'cirurgia' ? Math.max(0, anesthesiaCost) : undefined,
+    anesthesiaCost: category === 'cirurgia' ? (hasAnesthetist ? Math.max(0, anesthesiaCost) : 0) : undefined,
     vetCommissionType,
     vetCommissionValue: Math.max(0, vetCommissionValue),
     vetCommissionRole: vetCommissionRole.trim() || undefined,
@@ -119,13 +123,18 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
   };
   const { breakdown } = calculateProcedure(draft, insumosMap, settings);
 
-  const searchResults = useMemo(() => {
+  // Catálogo: só os insumos da mesma categoria do procedimento (ex: cirurgia)
+  const categoryInsumos = useMemo(
+    () => insumos.filter((ins) => ins.category === category).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
+    [insumos, category]
+  );
+  const filteredCatalog = useMemo(() => {
     const q = insumoSearch.trim().toLowerCase();
-    const list = q
-      ? insumos.filter((ins) => ins.name.toLowerCase().includes(q) || (ins.notes ?? '').toLowerCase().includes(q))
-      : insumos.filter((ins) => ins.category === category || ins.category === 'geral');
-    return list.slice(0, 8);
-  }, [insumos, insumoSearch, category]);
+    return q
+      ? categoryInsumos.filter((ins) => ins.name.toLowerCase().includes(q) || (ins.notes ?? '').toLowerCase().includes(q))
+      : categoryInsumos;
+  }, [categoryInsumos, insumoSearch]);
+  const addedQuantity = useMemo(() => new Map(items.map((it) => [it.insumoId, it.quantity])), [items]);
 
   const updateItem = (index: number, patch: Partial<ProcedureItem>) => {
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
@@ -139,8 +148,6 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
       }
       return [...prev, { insumoId, quantity: 1 }];
     });
-    setInsumoSearch('');
-    setIsSearchOpen(false);
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -163,7 +170,7 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
     <Modal
       id="modal-procedure-edit"
       title={isEditing ? NOUN[category].edit : NOUN[category].create}
-      size="xl"
+      size="2xl"
       onClose={onClose}
       footer={
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -324,92 +331,108 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
 
         {/* -------------------------------- INSUMOS -------------------------------- */}
         {tab === 'insumos' && (
-          <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-start">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Catálogo: insumos da mesma categoria do procedimento */}
+            <section className="flex flex-col min-w-0">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Insumos de {getCategoryLabel(category)} <span className="font-normal text-slate-400">({categoryInsumos.length})</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsQuickCreateOpen((v) => !v)}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-accent-700 hover:underline cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Cadastrar
+                </button>
+              </div>
+
+              {isQuickCreateOpen && (
+                <div className="mb-3">
+                  <QuickCreateInsumo
+                    category={category}
+                    onCancel={() => setIsQuickCreateOpen(false)}
+                    onCreate={(ins) => {
+                      onQuickCreateInsumo(ins);
+                      setItems((prev) => [...prev, { insumoId: ins.id, quantity: 1 }]);
+                      setIsQuickCreateOpen(false);
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="relative mb-2">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Buscar insumo para adicionar"
+                  placeholder="Filtrar"
+                  aria-label="Filtrar insumos"
                   value={insumoSearch}
-                  onChange={(e) => {
-                    setInsumoSearch(e.target.value);
-                    setIsSearchOpen(true);
-                  }}
-                  onFocus={() => setIsSearchOpen(true)}
-                  onBlur={() => setIsSearchOpen(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (searchResults[0]) addInsumo(searchResults[0].id);
-                    }
-                  }}
+                  onChange={(e) => setInsumoSearch(e.target.value)}
                   className={`${inputClass} pl-9`}
                 />
-                {isSearchOpen && (
-                  <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
-                    {searchResults.length > 0 ? (
-                      searchResults.map((ins) => (
-                        <button
-                          key={ins.id}
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => addInsumo(ins.id)}
-                          className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm text-left hover:bg-slate-50 cursor-pointer"
-                        >
-                          <span className="truncate text-slate-800">{ins.name}</span>
-                          <span className="text-slate-400 whitespace-nowrap tabular-nums">
-                            {formatUnitCost(ins.costPerUnit)}/{ins.unit}
-                          </span>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="px-3 py-2 text-sm text-slate-500">Nenhum insumo encontrado.</p>
-                    )}
-                  </div>
-                )}
               </div>
-              <button type="button" onClick={() => setIsQuickCreateOpen((v) => !v)} className={secondaryButtonClass}>
-                <Plus className="w-4 h-4" />
-                Cadastrar insumo
-              </button>
-            </div>
 
-            {isQuickCreateOpen && (
-              <QuickCreateInsumo
-                category={category}
-                onCancel={() => setIsQuickCreateOpen(false)}
-                onCreate={(ins) => {
-                  onQuickCreateInsumo(ins);
-                  setItems((prev) => [...prev, { insumoId: ins.id, quantity: 1 }]);
-                  setIsQuickCreateOpen(false);
-                }}
-              />
-            )}
+              <ul className="border border-slate-200 rounded-lg divide-y divide-slate-100 overflow-y-auto max-h-72 lg:max-h-[max(14rem,calc(92vh-23rem))]">
+                {filteredCatalog.map((ins) => {
+                  const added = addedQuantity.get(ins.id);
+                  return (
+                    <li key={ins.id}>
+                      <button
+                        type="button"
+                        onClick={() => addInsumo(ins.id)}
+                        title={added ? 'Adicionar mais 1' : 'Adicionar'}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent-50 cursor-pointer group"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm text-slate-800 truncate">{ins.name}</div>
+                          <div className="text-xs text-slate-400 tabular-nums">
+                            {formatUnitCost(ins.costPerUnit)} / {ins.unit}
+                          </div>
+                        </div>
+                        {added !== undefined ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-700 bg-accent-50 border border-accent-100 rounded-full px-2 py-0.5 whitespace-nowrap">
+                            <Check className="w-3 h-3" />
+                            {formatDecimal(added, 3)} {ins.unit}
+                          </span>
+                        ) : (
+                          <Plus className="w-4 h-4 text-slate-300 group-hover:text-accent-600 shrink-0" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+                {filteredCatalog.length === 0 && (
+                  <li className="px-3 py-6 text-center text-sm text-slate-500">
+                    {categoryInsumos.length === 0
+                      ? `Nenhum insumo cadastrado na categoria ${getCategoryLabel(category)}.`
+                      : 'Nenhum insumo encontrado.'}
+                  </li>
+                )}
+              </ul>
+            </section>
 
-            {items.length > 0 ? (
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr className="text-left text-xs text-slate-500">
-                      <th className="px-4 py-2 font-medium">Item</th>
-                      <th className="px-2 py-2 font-medium w-32">Quantidade</th>
-                      <th className="px-4 py-2 font-medium text-right w-28">Subtotal</th>
-                      <th className="w-10" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
+            {/* Itens já adicionados ao procedimento */}
+            <section className="flex flex-col min-w-0">
+              <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                Adicionados <span className="font-normal text-slate-400">({items.length})</span>
+              </h3>
+
+              {items.length > 0 ? (
+                <div className="border border-slate-200 rounded-lg flex flex-col overflow-hidden">
+                  <ul className="divide-y divide-slate-100 overflow-y-auto max-h-80 lg:max-h-[max(14rem,calc(92vh-23rem))]">
                     {items.map((item, idx) => {
                       const ins = insumosMap.get(item.insumoId);
                       return (
-                        <tr key={`${item.insumoId}-${idx}`} className="align-top">
-                          <td className="px-4 py-2">
+                        <li key={`${item.insumoId}-${idx}`} className="px-3 py-2.5 flex items-start gap-2">
+                          <div className="min-w-0 flex-1">
                             {ins ? (
-                              <div className="text-slate-800 pt-1.5">{ins.name}</div>
+                              <div className="text-sm text-slate-800 truncate" title={ins.name}>{ins.name}</div>
                             ) : (
-                              <div className="text-amber-700 pt-1.5 flex items-center gap-1.5">
-                                <AlertTriangle className="w-3.5 h-3.5" />
-                                Insumo não encontrado ({item.insumoId})
+                              <div className="text-sm text-amber-700 flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">Não encontrado ({item.insumoId})</span>
                               </div>
                             )}
                             <input
@@ -417,58 +440,51 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                               placeholder="Adicionar observação"
                               value={item.notes ?? ''}
                               onChange={(e) => updateItem(idx, { notes: e.target.value })}
-                              className="w-full mt-0.5 py-0.5 text-xs text-slate-500 bg-transparent border-0 border-b border-transparent hover:border-slate-200 focus:border-accent-500 focus:outline-none placeholder:text-slate-300"
+                              className="w-full py-0.5 text-xs text-slate-500 bg-transparent border-0 border-b border-transparent hover:border-slate-200 focus:border-accent-500 focus:outline-none placeholder:text-slate-300"
                             />
-                          </td>
-                          <td className="px-2 py-2">
-                            <div className="relative">
-                              <input
-                                type="number"
-                                min="0"
-                                step="any"
-                                aria-label={`Quantidade de ${ins?.name ?? item.insumoId}`}
-                                value={item.quantity}
-                                onChange={(e) => updateItem(idx, { quantity: Math.max(0, toNumber(e.target.value)) })}
-                                className="w-full pl-2.5 pr-9 py-1.5 text-sm bg-white border border-slate-300 rounded-md tabular-nums focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500"
-                              />
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
-                                {ins?.unit ?? ''}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 pt-3.5 text-right font-medium text-slate-900 tabular-nums whitespace-nowrap">
+                          </div>
+                          <div className="relative w-24 shrink-0">
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              aria-label={`Quantidade de ${ins?.name ?? item.insumoId}`}
+                              value={item.quantity}
+                              onChange={(e) => updateItem(idx, { quantity: Math.max(0, toNumber(e.target.value)) })}
+                              className="w-full pl-2 pr-8 py-1.5 text-sm bg-white border border-slate-300 rounded-md tabular-nums focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
+                              {ins?.unit ?? ''}
+                            </span>
+                          </div>
+                          <div className="w-20 shrink-0 pt-1.5 text-right text-sm font-medium text-slate-900 tabular-nums whitespace-nowrap">
                             {formatBRL((item.quantity || 0) * (ins?.costPerUnit ?? 0))}
-                          </td>
-                          <td className="pr-2 py-2">
-                            <button
-                              type="button"
-                              onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
-                              title="Remover"
-                              aria-label="Remover item"
-                              className="p-1.5 mt-0.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
+                            title="Remover"
+                            aria-label="Remover item"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </li>
                       );
                     })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-slate-50 border-t border-slate-200">
-                      <td colSpan={2} className="px-4 py-2.5 text-sm text-slate-600">Total de insumos</td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-slate-900 tabular-nums">{formatBRL(breakdown.directCost)}</td>
-                      <td />
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            ) : (
-              <div className="py-12 text-center border border-dashed border-slate-300 rounded-lg">
-                <p className="text-sm font-medium text-slate-700">Nenhum insumo adicionado.</p>
-                <p className="text-sm text-slate-500 mt-1">Use a busca acima para incluir materiais e medicamentos.</p>
-              </div>
-            )}
+                  </ul>
+                  <div className="flex justify-between px-3 py-2.5 bg-slate-50 border-t border-slate-200 text-sm">
+                    <span className="text-slate-600">Total de insumos</span>
+                    <span className="font-semibold text-slate-900 tabular-nums">{formatBRL(breakdown.directCost)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 py-12 flex flex-col items-center justify-center text-center border border-dashed border-slate-300 rounded-lg">
+                  <p className="text-sm font-medium text-slate-700">Nenhum insumo adicionado.</p>
+                  <p className="text-sm text-slate-500 mt-1">Clique em um insumo da lista para incluí-lo.</p>
+                </div>
+              )}
+            </section>
           </div>
         )}
 
@@ -477,20 +493,32 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <div className="lg:col-span-3 space-y-6">
               {category === 'cirurgia' && (
-                <div>
-                  <label htmlFor="input-anesthesia-cost" className={labelClass}>Anestesia terceirizada</label>
-                  <Prefixed prefix="R$">
-                    <input
-                      id="input-anesthesia-cost"
-                      type="number"
-                      min="0"
-                      step="10"
-                      value={anesthesiaCost}
-                      onChange={(e) => setAnesthesiaCost(toNumber(e.target.value))}
-                      className={`${inputClass} pl-10`}
-                    />
-                  </Prefixed>
-                </div>
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-semibold text-slate-900 mb-3">Anestesia</legend>
+                  <Switch
+                    id="switch-anesthetist"
+                    checked={hasAnesthetist}
+                    onChange={setHasAnesthetist}
+                    label="Anestesista terceirizado"
+                    description="Ative quando contratar um anestesista para esta cirurgia."
+                  />
+                  {hasAnesthetist && (
+                    <div className="sm:w-1/2">
+                      <label htmlFor="input-anesthesia-cost" className={labelClass}>Valor do anestesista</label>
+                      <Prefixed prefix="R$">
+                        <input
+                          id="input-anesthesia-cost"
+                          type="number"
+                          min="0"
+                          step="10"
+                          value={anesthesiaCost || ''}
+                          onChange={(e) => setAnesthesiaCost(toNumber(e.target.value))}
+                          className={`${inputClass} pl-10`}
+                        />
+                      </Prefixed>
+                    </div>
+                  )}
+                </fieldset>
               )}
 
               <fieldset className="space-y-4">
@@ -585,7 +613,7 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                 <h4 className="text-sm font-semibold text-slate-900 mb-3">Composição do custo</h4>
                 <dl className="space-y-2 text-sm">
                   <SummaryRow label="Insumos" value={breakdown.directCost} />
-                  {category === 'cirurgia' && <SummaryRow label="Anestesia" value={breakdown.anesthesiaCost} />}
+                  {breakdown.anesthesiaCost > 0 && <SummaryRow label="Anestesia" value={breakdown.anesthesiaCost} />}
                   <SummaryRow label="Comissão" value={breakdown.vetCommissionCost} />
                   <SummaryRow label="Operacional" value={breakdown.operationalCost} />
                   <div className="flex justify-between pt-3 mt-1 border-t border-slate-200 font-semibold text-slate-900">
@@ -604,6 +632,36 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
     </Modal>
   );
 };
+
+const Switch: React.FC<{
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  description?: string;
+}> = ({ id, checked, onChange, label, description }) => (
+  <div className="flex items-start gap-3">
+    <button
+      id={id}
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-labelledby={`${id}-label`}
+      onClick={() => onChange(!checked)}
+      className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 rounded-full transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50 ${
+        checked ? 'bg-accent-600' : 'bg-slate-300'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : ''}`}
+      />
+    </button>
+    <div>
+      <span id={`${id}-label`} className="text-sm font-medium text-slate-800 block">{label}</span>
+      {description && <span className="text-xs text-slate-500">{description}</span>}
+    </div>
+  </div>
+);
 
 const SummaryRow: React.FC<{ label: string; value: number }> = ({ label, value }) => (
   <div className="flex justify-between text-slate-600">
