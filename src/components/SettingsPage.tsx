@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Check, Plus, Trash2 } from 'lucide-react';
+import { Check, Pencil, Plus, Trash2 } from 'lucide-react';
 import { ClinicSettings, ExternalProfessional } from '../types';
 import { SectionHeader } from './SectionHeader';
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from './Modal';
+import { formatBRL } from '../utils/costCalculations';
+import { NumericInput } from './NumericInput';
 
 interface SettingsPageProps {
   settings: ClinicSettings;
@@ -10,47 +12,52 @@ interface SettingsPageProps {
   onResetData: () => void;
 }
 
-const toNumber = (value: string) => {
-  const n = parseFloat(value.replace(',', '.'));
-  return isNaN(n) ? 0 : n;
-};
-
 export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onSave, onResetData }) => {
   const [form, setForm] = useState<ClinicSettings>(settings);
   const [saved, setSaved] = useState(false);
   const [newProfessionalName, setNewProfessionalName] = useState('');
   const [newProfessionalSpecialty, setNewProfessionalSpecialty] = useState('');
   const [newProfessionalCost, setNewProfessionalCost] = useState(0);
+  const [editingProfessionalId, setEditingProfessionalId] = useState<string | null>(null);
 
   const update = <K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
   };
 
-  const updateProfessional = (id: string, patch: Partial<ExternalProfessional>) => {
-    update(
-      'externalProfessionals',
-      (form.externalProfessionals ?? []).map((professional) =>
-        professional.id === id ? { ...professional, ...patch } : professional
-      )
-    );
+  const clearProfessionalForm = () => {
+    setEditingProfessionalId(null);
+    setNewProfessionalName('');
+    setNewProfessionalSpecialty('');
+    setNewProfessionalCost(0);
   };
 
-  const addProfessional = () => {
+  const saveProfessional = () => {
     const name = newProfessionalName.trim();
     const specialty = newProfessionalSpecialty.trim();
     if (!name || !specialty) return;
 
     const professional: ExternalProfessional = {
-      id: `professional_${Date.now()}`,
+      id: editingProfessionalId ?? `professional_${Date.now()}`,
       name,
       specialty,
       defaultCost: Math.max(0, newProfessionalCost),
     };
-    update('externalProfessionals', [...(form.externalProfessionals ?? []), professional]);
-    setNewProfessionalName('');
-    setNewProfessionalSpecialty('');
-    setNewProfessionalCost(0);
+    const professionals = form.externalProfessionals ?? [];
+    update(
+      'externalProfessionals',
+      editingProfessionalId
+        ? professionals.map((item) => item.id === editingProfessionalId ? professional : item)
+        : [...professionals, professional]
+    );
+    clearProfessionalForm();
+  };
+
+  const editProfessional = (professional: ExternalProfessional) => {
+    setEditingProfessionalId(professional.id);
+    setNewProfessionalName(professional.name);
+    setNewProfessionalSpecialty(professional.specialty);
+    setNewProfessionalCost(professional.defaultCost);
   };
 
   const isDirty = JSON.stringify(form) !== JSON.stringify(settings);
@@ -104,52 +111,41 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onSave, on
             {(form.externalProfessionals ?? []).length > 0 && (
               <ul className="divide-y divide-slate-100">
                 {(form.externalProfessionals ?? []).map((professional) => (
-                  <li key={professional.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] items-end gap-3 py-3">
-                    <div>
-                      <label htmlFor={`input-professional-name-${professional.id}`} className={labelClass}>Nome</label>
-                      <input
-                        id={`input-professional-name-${professional.id}`}
-                        type="text"
-                        value={professional.name}
-                        onChange={(e) => updateProfessional(professional.id, { name: e.target.value })}
-                        className={inputClass}
-                      />
+                  <li key={professional.id} className="flex items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{professional.name}</p>
+                      <p className="text-sm text-slate-500 truncate">{professional.specialty} · {formatBRL(professional.defaultCost)} por procedimento</p>
                     </div>
-                    <div>
-                      <label htmlFor={`input-professional-specialty-${professional.id}`} className={labelClass}>Especialidade</label>
-                      <input
-                        id={`input-professional-specialty-${professional.id}`}
-                        type="text"
-                        value={professional.specialty}
-                        onChange={(e) => updateProfessional(professional.id, { specialty: e.target.value })}
-                        className={inputClass}
-                      />
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => editProfessional(professional)}
+                        title={`Editar ${professional.name}`}
+                        aria-label={`Editar ${professional.name}`}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md cursor-pointer"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          update('externalProfessionals', (form.externalProfessionals ?? []).filter((item) => item.id !== professional.id));
+                          if (editingProfessionalId === professional.id) clearProfessionalForm();
+                        }}
+                        title={`Excluir ${professional.name}`}
+                        aria-label={`Excluir ${professional.name}`}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <MoneyField
-                      id={`input-professional-cost-${professional.id}`}
-                      label="Valor padrão"
-                      value={professional.defaultCost}
-                      onChange={(value) => updateProfessional(professional.id, { defaultCost: value })}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => update(
-                        'externalProfessionals',
-                        (form.externalProfessionals ?? []).filter((item) => item.id !== professional.id)
-                      )}
-                      title={`Excluir ${professional.name}`}
-                      aria-label={`Excluir ${professional.name}`}
-                      className="p-2 mb-0.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </li>
                 ))}
               </ul>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="input-new-professional-name" className={labelClass}>Nome do profissional</label>
+                <label htmlFor="input-new-professional-name" className={labelClass}>Nome</label>
                 <input
                   id="input-new-professional-name"
                   type="text"
@@ -160,14 +156,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onSave, on
                 />
               </div>
               <div>
-                <label htmlFor="input-new-professional-specialty" className={labelClass}>Especialidade ou função</label>
+                <label htmlFor="input-new-professional-specialty" className={labelClass}>Especialidade</label>
                 <input
                   id="input-new-professional-specialty"
                   type="text"
                   value={newProfessionalSpecialty}
                   onChange={(e) => setNewProfessionalSpecialty(e.target.value)}
                   className={inputClass}
-                  placeholder="Ex: Anestesiologia ou Oftalmologia"
+                  placeholder="Ex: Anestesiologia"
                 />
               </div>
               <MoneyField
@@ -179,13 +175,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onSave, on
             </div>
             <button
               type="button"
-              onClick={addProfessional}
+              onClick={saveProfessional}
               disabled={!newProfessionalName.trim() || !newProfessionalSpecialty.trim()}
               className={secondaryButtonClass}
             >
-              <Plus className="w-4 h-4" />
-              Adicionar profissional
+              {editingProfessionalId ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {editingProfessionalId ? 'Salvar profissional' : 'Adicionar profissional'}
             </button>
+            {editingProfessionalId && (
+              <button type="button" onClick={clearProfessionalForm} className="ml-3 text-sm text-slate-500 hover:text-slate-800">
+                Cancelar edição
+              </button>
+            )}
           </Section>
 
           <Section title="Comissões padrão" description="Aplicado aos procedimentos sem comissão própria e sugerido ao criar novos.">
@@ -259,13 +260,12 @@ const MoneyField: React.FC<{ id: string; label: string; value: number; onChange:
     <label htmlFor={id} className={labelClass}>{label}</label>
     <div className="relative">
       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none">R$</span>
-      <input
+      <NumericInput
         id={id}
-        type="number"
         min="0"
         step="any"
         value={value}
-        onChange={(e) => onChange(toNumber(e.target.value))}
+        onChange={onChange}
         className={`${inputClass} pl-10`}
       />
     </div>
@@ -276,14 +276,13 @@ const PercentField: React.FC<{ id: string; label: string; value: number; onChang
   <div>
     <label htmlFor={id} className={labelClass}>{label}</label>
     <div className="relative">
-      <input
+      <NumericInput
         id={id}
-        type="number"
         min="0"
         max="100"
         step="1"
         value={value}
-        onChange={(e) => onChange(toNumber(e.target.value))}
+        onChange={onChange}
         className={`${inputClass} pr-8`}
       />
       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none">%</span>

@@ -4,6 +4,7 @@ import { ClinicSettings, ExternalProfessionalAssignment, Insumo, Procedure, Proc
 import { calculateProcedure, formatBRL, formatDecimal, formatUnitCost, getCategoryLabel, getDefaultCommissionPercent } from '../utils/costCalculations';
 import { Modal, inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from './Modal';
 import { UNIT_OPTIONS } from './InsumoModal';
+import { NumericInput } from './NumericInput';
 
 interface ProcedureEditModalProps {
   procedure: Procedure | null; // null se for novo
@@ -542,14 +543,13 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                             <div className="sm:w-44">
                               <label htmlFor={`input-assigned-professional-cost-${assignment.professionalId}`} className={labelClass}>Custo nesta cirurgia</label>
                               <Prefixed prefix="R$">
-                                <input
+                                <NumericInput
                                   id={`input-assigned-professional-cost-${assignment.professionalId}`}
-                                  type="number"
                                   min="0"
                                   step="10"
                                   value={assignment.cost}
-                                  onChange={(e) => setProfessionalAssignments((prev) => prev.map((item) =>
-                                    item.professionalId === assignment.professionalId ? { ...item, cost: toNumber(e.target.value) } : item
+                                  onChange={(value) => setProfessionalAssignments((prev) => prev.map((item) =>
+                                    item.professionalId === assignment.professionalId ? { ...item, cost: value } : item
                                   ))}
                                   className={`${inputClass} pl-10`}
                                 />
@@ -609,26 +609,24 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                     </label>
                     {vetCommissionType === 'percent' ? (
                       <Suffixed suffix="%">
-                        <input
+                        <NumericInput
                           id="input-commission-value"
-                          type="number"
                           min="0"
                           max="100"
                           step="1"
                           value={vetCommissionValue}
-                          onChange={(e) => setVetCommissionValue(toNumber(e.target.value))}
+                          onChange={setVetCommissionValue}
                           className={`${inputClass} pr-8`}
                         />
                       </Suffixed>
                     ) : (
                       <Prefixed prefix="R$">
-                        <input
+                        <NumericInput
                           id="input-commission-value"
-                          type="number"
                           min="0"
                           step="10"
                           value={vetCommissionValue}
-                          onChange={(e) => setVetCommissionValue(toNumber(e.target.value))}
+                          onChange={setVetCommissionValue}
                           className={`${inputClass} pl-10`}
                         />
                       </Prefixed>
@@ -643,14 +641,13 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                   Preço cobrado do tutor <span className="text-slate-400 font-normal">(opcional)</span>
                 </label>
                 <Prefixed prefix="R$">
-                  <input
+                  <NumericInput
                     id="input-procedure-price"
-                    type="number"
                     min="0"
                     step="5"
-                    value={price || ''}
+                    value={price}
                     placeholder="0,00"
-                    onChange={(e) => setPrice(toNumber(e.target.value))}
+                    onChange={setPrice}
                     className={`${inputClass} pl-10`}
                   />
                 </Prefixed>
@@ -745,14 +742,13 @@ const QuickCreateInsumo: React.FC<{
         />
         <div className="relative sm:col-span-2">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none">R$</span>
-          <input
-            type="number"
+          <NumericInput
             min="0"
             step="0.01"
             placeholder="Custo"
             aria-label="Custo por unidade"
-            value={cost || ''}
-            onChange={(e) => setCost(toNumber(e.target.value))}
+            value={cost}
+            onChange={setCost}
             className={`${inputClass} pl-10`}
           />
         </div>

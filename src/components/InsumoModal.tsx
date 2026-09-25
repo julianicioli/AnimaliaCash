@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Insumo, InsumoCategory, PackageType, UnitType } from '../types';
 import { formatBRL, formatDecimal, formatUnitCost } from '../utils/costCalculations';
 import { Modal, inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from './Modal';
+import { NumericInput } from './NumericInput';
 
 export const UNIT_OPTIONS: { value: UnitType; label: string }[] = [
   { value: 'un', label: 'Unidade (un)' },
@@ -197,15 +198,14 @@ export const InsumoModal: React.FC<InsumoModalProps> = ({ insumo, onClose, onSav
                 <label htmlFor="input-package-price" className={labelClass}>Preço {ofThe} {packageLabel}</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none">R$</span>
-                  <input
+                  <NumericInput
                     id="input-package-price"
-                    type="number"
                     step="0.01"
                     min="0"
                     placeholder="0,00"
-                    value={packagePrice || ''}
+                    value={packagePrice}
                     onChange={(e) => {
-                      setPackagePrice(toNumber(e.target.value));
+                      setPackagePrice(e);
                       clearError();
                     }}
                     className={`${inputClass} pl-10`}
@@ -258,14 +258,13 @@ export const InsumoModal: React.FC<InsumoModalProps> = ({ insumo, onClose, onSav
             <div className="flex items-center gap-2">
               <div className="relative w-40">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none">R$</span>
-                <input
+                <NumericInput
                   id="input-insumo-cost"
-                  type="number"
                   step="any"
                   min="0"
-                  value={manualCost || ''}
+                  value={manualCost}
                   onChange={(e) => {
-                    setManualCost(toNumber(e.target.value));
+                    setManualCost(e);
                     clearError();
                   }}
                   className={`${inputClass} pl-10`}
