@@ -14,14 +14,27 @@ export type UnitType =
   | 'diaria' 
   | 'hora';
 
+export type PackageType =
+  | 'caixa'
+  | 'pacote'
+  | 'frasco'
+  | 'galao'
+  | 'ampola'
+  | 'bolsa'
+  | 'rolo'
+  | 'fardo'
+  | 'kit'
+  | 'unidade';
+
 export interface Insumo {
   id: string;
   name: string;
   category: InsumoCategory;
-  unit: UnitType;
-  costPerUnit: number; // Custo unitário em R$
-  packagePrice?: number; // Preço do frasco/embalagem original
-  packageSize?: number; // Tamanho total da embalagem (ex: 5000ml)
+  unit: UnitType; // Unidade de uso nos procedimentos
+  costPerUnit: number; // Custo unitário em R$ (packagePrice ÷ packageSize quando comprado em embalagem)
+  packageType?: PackageType; // Como o item é comprado (caixa, frasco...)
+  packagePrice?: number; // Preço pago pela embalagem
+  packageSize?: number; // Quantidade que vem na embalagem, na unidade de uso (ex: 20 par, 5000 ml)
   notes?: string;
 }
 
