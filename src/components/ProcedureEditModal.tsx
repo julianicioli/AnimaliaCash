@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Search, Trash2, AlertTriangle, Check } from 'lucide-react';
-import { ClinicSettings, Insumo, Procedure, ProcedureCategory, ProcedureItem, UnitType } from '../types';
+import { ClinicSettings, ExternalProfessionalAssignment, Insumo, Procedure, ProcedureCategory, ProcedureItem, UnitType } from '../types';
 import { calculateProcedure, formatBRL, formatDecimal, formatUnitCost, getCategoryLabel, getDefaultCommissionPercent } from '../utils/costCalculations';
 import { Modal, inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from './Modal';
 import { UNIT_OPTIONS } from './InsumoModal';
@@ -82,14 +82,8 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
   const [description, setDescription] = useState(procedure?.description ?? '');
 
   // Custos
-  // A clínica não tem anestesista próprio: ele é contratado por fora quando necessário.
-  // Cirurgia nova começa sem anestesista; existente mantém o que tinha.
-  const [hasAnesthetist, setHasAnesthetist] = useState<boolean>(
-    procedure ? (procedure.anesthesiaCost ?? settings.defaultAnesthesiaCost ?? 0) > 0 : false
-  );
-  const [anesthesiaCost, setAnesthesiaCost] = useState<number>(
-    procedure?.anesthesiaCost || settings.defaultAnesthesiaCost || 250
-  );
+  const [professionalAssignments, setProfessionalAssignments] = useState<ExternalProfessionalAssignment[]>(() => (procedure?.externalProfessionalAssignments ?? []).map((assignment) => ({ ...assignment })));
+  const [professionalToAdd, setProfessionalToAdd] = useState('');
   const [vetCommissionType, setVetCommissionType] = useState<'percent' | 'fixed'>(procedure?.vetCommissionType ?? 'percent');
   const [vetCommissionValue, setVetCommissionValue] = useState<number>(
     procedure?.vetCommissionValue ?? getDefaultCommissionPercent(category, settings)
@@ -114,7 +108,12 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
     targetWeightKg: targetWeightKg && targetWeightKg > 0 ? targetWeightKg : undefined,
     durationMinutes: Math.max(1, Math.round(durationMinutes)),
     laborMinutes: category === 'internacao' ? Math.max(0, laborMinutes) : procedure?.laborMinutes,
-    anesthesiaCost: category === 'cirurgia' ? (hasAnesthetist ? Math.max(0, anesthesiaCost) : 0) : undefined,
+    anesthesiaCost: category === 'cirurgia' ? 0 : procedure?.anesthesiaCost,
+    externalProfessionalAssignments: category === 'cirurgia' && professionalAssignments.length > 0
+      ? professionalAssignments.map((assignment) => ({ ...assignment, cost: Math.max(0, assignment.cost) }))
+      : undefined,
+    externalVeterinarianId: undefined,
+    externalVeterinarianCost: undefined,
     vetCommissionType,
     vetCommissionValue: Math.max(0, vetCommissionValue),
     vetCommissionRole: vetCommissionRole.trim() || undefined,
@@ -136,6 +135,12 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
   }, [categoryInsumos, insumoSearch]);
   const addedQuantity = useMemo(() => new Map(items.map((it) => [it.insumoId, it.quantity])), [items]);
 
+  const addExternalProfessional = () => {
+    const professional = settings.externalProfessionals?.find((item) => item.id === professionalToAdd);
+    if (!professional || professionalAssignments.some((item) => item.professionalId === professional.id)) return;
+    setProfessionalAssignments((prev) => [...prev, { professionalId: professional.id, cost: professional.defaultCost }]);
+    setProfessionalToAdd('');
+  };
   const updateItem = (index: number, patch: Partial<ProcedureItem>) => {
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   };
@@ -494,33 +499,80 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
             <div className="lg:col-span-3 space-y-6">
               {category === 'cirurgia' && (
                 <fieldset className="space-y-3">
-                  <legend className="text-sm font-semibold text-slate-900 mb-3">Anestesia</legend>
-                  <Switch
-                    id="switch-anesthetist"
-                    checked={hasAnesthetist}
-                    onChange={setHasAnesthetist}
-                    label="Anestesista terceirizado"
-                    description="Ative quando contratar um anestesista para esta cirurgia."
-                  />
-                  {hasAnesthetist && (
-                    <div className="sm:w-1/2">
-                      <label htmlFor="input-anesthesia-cost" className={labelClass}>Valor do anestesista</label>
-                      <Prefixed prefix="R$">
-                        <input
-                          id="input-anesthesia-cost"
-                          type="number"
-                          min="0"
-                          step="10"
-                          value={anesthesiaCost || ''}
-                          onChange={(e) => setAnesthesiaCost(toNumber(e.target.value))}
-                          className={`${inputClass} pl-10`}
-                        />
-                      </Prefixed>
-                    </div>
+                  <legend className="text-sm font-semibold text-slate-900 mb-3">Profissionais terceirizados</legend>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      id="select-external-professional"
+                      value={professionalToAdd}
+                      onChange={(e) => setProfessionalToAdd(e.target.value)}
+                      className={`${inputClass} flex-1`}
+                    >
+                      <option value="">Selecione anestesista ou especialista</option>
+                      {(settings.externalProfessionals ?? [])
+                        .filter((professional) => !professionalAssignments.some((item) => item.professionalId === professional.id))
+                        .map((professional) => (
+                          <option key={professional.id} value={professional.id}>
+                            {professional.name} · {professional.specialty}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={addExternalProfessional}
+                      disabled={!professionalToAdd}
+                      className={secondaryButtonClass}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar
+                    </button>
+                  </div>
+                  {(settings.externalProfessionals ?? []).length === 0 && (
+                    <p className="text-xs text-slate-500">Cadastre profissionais em Configurações para selecioná-los aqui.</p>
+                  )}
+                  {professionalAssignments.length > 0 && (
+                    <ul className="divide-y divide-slate-100 border-y border-slate-100">
+                      {professionalAssignments.map((assignment) => {
+                        const professional = settings.externalProfessionals?.find((item) => item.id === assignment.professionalId);
+                        return (
+                          <li key={assignment.professionalId} className="flex flex-col sm:flex-row sm:items-end gap-3 py-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-800">{professional?.name ?? 'Profissional não cadastrado'}</p>
+                              <p className="text-xs text-slate-500">{professional?.specialty}</p>
+                            </div>
+                            <div className="sm:w-44">
+                              <label htmlFor={`input-assigned-professional-cost-${assignment.professionalId}`} className={labelClass}>Custo nesta cirurgia</label>
+                              <Prefixed prefix="R$">
+                                <input
+                                  id={`input-assigned-professional-cost-${assignment.professionalId}`}
+                                  type="number"
+                                  min="0"
+                                  step="10"
+                                  value={assignment.cost}
+                                  onChange={(e) => setProfessionalAssignments((prev) => prev.map((item) =>
+                                    item.professionalId === assignment.professionalId ? { ...item, cost: toNumber(e.target.value) } : item
+                                  ))}
+                                  className={`${inputClass} pl-10`}
+                                />
+                              </Prefixed>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setProfessionalAssignments((prev) => prev.filter((item) => item.professionalId !== assignment.professionalId))}
+                              title={`Remover ${professional?.name ?? 'profissional'}`}
+                              aria-label={`Remover ${professional?.name ?? 'profissional'}`}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </fieldset>
               )}
 
+              {category === 'cirurgia' && (
               <fieldset className="space-y-4">
                 <legend className="text-sm font-semibold text-slate-900 mb-3">Comissão do profissional</legend>
                 <div>
@@ -584,6 +636,7 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                   </div>
                 </div>
               </fieldset>
+              )}
 
               <div>
                 <label htmlFor="input-procedure-price" className={labelClass}>
@@ -613,7 +666,9 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
                 <h4 className="text-sm font-semibold text-slate-900 mb-3">Composição do custo</h4>
                 <dl className="space-y-2 text-sm">
                   <SummaryRow label="Insumos" value={breakdown.directCost} />
-                  {breakdown.anesthesiaCost > 0 && <SummaryRow label="Anestesia" value={breakdown.anesthesiaCost} />}
+                  {breakdown.externalProfessionalCost > 0 && (
+                    <SummaryRow label="Profissionais terceirizados" value={breakdown.externalProfessionalCost} />
+                  )}
                   <SummaryRow label="Comissão" value={breakdown.vetCommissionCost} />
                   <SummaryRow label="Operacional" value={breakdown.operationalCost} />
                   <div className="flex justify-between pt-3 mt-1 border-t border-slate-200 font-semibold text-slate-900">
@@ -632,36 +687,6 @@ export const ProcedureEditModal: React.FC<ProcedureEditModalProps> = ({
     </Modal>
   );
 };
-
-const Switch: React.FC<{
-  id: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  label: string;
-  description?: string;
-}> = ({ id, checked, onChange, label, description }) => (
-  <div className="flex items-start gap-3">
-    <button
-      id={id}
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-labelledby={`${id}-label`}
-      onClick={() => onChange(!checked)}
-      className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 rounded-full transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50 ${
-        checked ? 'bg-accent-600' : 'bg-slate-300'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : ''}`}
-      />
-    </button>
-    <div>
-      <span id={`${id}-label`} className="text-sm font-medium text-slate-800 block">{label}</span>
-      {description && <span className="text-xs text-slate-500">{description}</span>}
-    </div>
-  </div>
-);
 
 const SummaryRow: React.FC<{ label: string; value: number }> = ({ label, value }) => (
   <div className="flex justify-between text-slate-600">

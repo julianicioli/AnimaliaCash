@@ -44,6 +44,25 @@ export interface ProcedureItem {
   notes?: string;
 }
 
+export interface ExternalProfessional {
+  id: string;
+  name: string;
+  specialty: string;
+  defaultCost: number;
+}
+
+export interface ExternalProfessionalAssignment {
+  professionalId: string;
+  cost: number;
+}
+
+export interface ExternalProfessionalCostDetail extends ExternalProfessionalAssignment {
+  name: string;
+  specialty: string;
+}
+
+export interface ExternalVeterinarian extends ExternalProfessional {}
+
 export type ProcedureCategory = 'banho_tosa' | 'cirurgia' | 'internacao';
 
 export interface Procedure {
@@ -55,6 +74,9 @@ export interface Procedure {
   durationMinutes: number; // Tempo médio do procedimento em minutos (na internação, o período total)
   laborMinutes?: number; // Tempo de atendimento que entra no custo operacional (padrão: durationMinutes)
   anesthesiaCost?: number; // Custo do anestesista terceirizado lançado automaticamente
+  externalProfessionalAssignments?: ExternalProfessionalAssignment[];
+  externalVeterinarianId?: string;
+  externalVeterinarianCost?: number;
   vetCommissionType?: 'percent' | 'fixed'; // Tipo de comissão do veterinário (% ou R$ fixo)
   vetCommissionValue?: number; // Valor da comissão (% sobre o preço ou valor em R$)
   vetCommissionRole?: string; // Papel do veterinário (ex: Cirurgião, Plantonista, etc.)
@@ -70,6 +92,8 @@ export interface ClinicSettings {
   logoUrl?: string; // URL ou base64 da logo personalizada
   hourlyOperationalRate: number; // Custo por hora de funcionamento da clínica/mão de obra (R$/hora)
   defaultAnesthesiaCost?: number; // Custo padrão pré-lançado do anestesista terceirizado (ex: R$ 250)
+  externalProfessionals?: ExternalProfessional[];
+  externalVeterinarians?: ExternalVeterinarian[];
   defaultVetCommissionSurgeryPercent?: number; // Comissão padrão do cirurgião (% ex: 25%)
   defaultVetCommissionInternmentPercent?: number; // Comissão padrão do plantonista/internista (% ex: 20%)
   defaultVetCommissionBathPercent?: number; // Comissão padrão do tosador/banhista (% ex: 15%)
@@ -79,10 +103,10 @@ export interface ClinicSettings {
 export interface CalculationBreakdown {
   directCost: number; // Custo direto de insumos e materiais
   insumosCost: number; // Materiais (gaze, luvas, fios, etc.)
-  anesthesiaCost: number; // Anestesista terceirizado
+  externalProfessionalCost: number;
   vetCommissionCost: number; // Comissão do médico veterinário responsável
   operationalCost: number; // Mão de obra / Centro cirúrgico por minuto
-  totalCost: number; // Insumos + Anestesia + Comissão + Operacional
+  totalCost: number; // Insumos + profissionais terceirizados + comissão + operacional
   suggestedPriceByMargin?: number;
   currentPrice?: number;
   profitAtCurrentPrice?: number;

@@ -1,4 +1,4 @@
-import { CalculationBreakdown, ClinicSettings, Insumo, Procedure, ProcedureCategory } from '../types';
+import { CalculationBreakdown, ClinicSettings, ExternalProfessionalCostDetail, Insumo, Procedure, ProcedureCategory } from '../types';
 
 export function formatBRL(value: number): string {
   if (value === null || value === undefined || isNaN(value)) return 'R$ 0,00';
@@ -109,6 +109,7 @@ export interface ItemCostDetail {
 export interface DetailedProcedureCalculation {
   procedure: Procedure;
   breakdown: CalculationBreakdown;
+  externalProfessionalDetails: ExternalProfessionalCostDetail[];
   itemDetails: ItemCostDetail[];
   itemsCount: number;
 }
@@ -155,9 +156,39 @@ export function calculateProcedure(
     : (procedure.fixedOverheadCost || 0);
 
   // Custo do Anestesista Terceirizado (lançado automaticamente para cirurgias)
-  const anesthesiaCost = procedure.category === 'cirurgia'
+  const legacyAnesthesiaCost = procedure.category === 'cirurgia'
     ? (procedure.anesthesiaCost !== undefined ? procedure.anesthesiaCost : (settings.defaultAnesthesiaCost ?? 250))
     : (procedure.anesthesiaCost || 0);
+  const assignments = [...(procedure.externalProfessionalAssignments ?? [])];
+  if (procedure.externalVeterinarianId && !assignments.some((item) => item.professionalId === procedure.externalVeterinarianId)) {
+    const professional = settings.externalProfessionals?.find((item) => item.id === procedure.externalVeterinarianId)
+      ?? settings.externalVeterinarians?.find((item) => item.id === procedure.externalVeterinarianId);
+    assignments.push({
+      professionalId: procedure.externalVeterinarianId,
+      cost: procedure.externalVeterinarianCost ?? professional?.defaultCost ?? 0,
+    });
+  }
+  const anesthetist = settings.externalProfessionals?.find((item) => item.id === 'prof_anesthetist_default');
+  const hasAnesthetist = assignments.some((assignment) => {
+    const professional = settings.externalProfessionals?.find((item) => item.id === assignment.professionalId);
+    return assignment.professionalId === 'prof_anesthetist_default' || professional?.specialty.toLowerCase().includes('anest');
+  });
+  if (legacyAnesthesiaCost > 0 && !hasAnesthetist) {
+    assignments.push({
+      professionalId: anesthetist?.id ?? 'prof_anesthetist_default',
+      cost: legacyAnesthesiaCost,
+    });
+  }
+  const externalProfessionalDetails = assignments.map((assignment) => {
+    const professional = settings.externalProfessionals?.find((item) => item.id === assignment.professionalId)
+      ?? settings.externalVeterinarians?.find((item) => item.id === assignment.professionalId);
+    return {
+      ...assignment,
+      name: professional?.name ?? (assignment.professionalId === 'prof_anesthetist_default' ? 'Anestesista' : 'Profissional não cadastrado'),
+      specialty: professional?.specialty ?? (assignment.professionalId === 'prof_anesthetist_default' ? 'Anestesiologia' : ''),
+    };
+  });
+  const externalProfessionalCost = externalProfessionalDetails.reduce((total, item) => total + Math.max(0, item.cost), 0);
 
   // Comissão do Médico Veterinário / Profissional Responsável
   let vetCommissionCost = 0;
@@ -168,13 +199,13 @@ export function calculateProcedure(
     if (commissionPercent > 0) {
       const baseForCommission = procedure.suggestedPrice && procedure.suggestedPrice > 0
         ? procedure.suggestedPrice
-        : (directCost + anesthesiaCost + operationalCost);
+        : (directCost + externalProfessionalCost + operationalCost);
       vetCommissionCost = (baseForCommission * commissionPercent) / 100;
     }
   }
 
-  // Custo Total da Clínica: Insumos + Anestesia + Comissão Veterinária + Operacional da Clínica
-  const totalCost = directCost + anesthesiaCost + operationalCost + vetCommissionCost;
+  // Custo Total da Clínica: insumos, equipe terceirizada, comissão e custo operacional.
+  const totalCost = directCost + externalProfessionalCost + operationalCost + vetCommissionCost;
 
   const targetMargin = procedure.targetMarginPercent || 50;
   const suggestedPriceByMargin = targetMargin > 0 && targetMargin < 95
@@ -190,7 +221,7 @@ export function calculateProcedure(
     breakdown: {
       directCost,
       insumosCost: directCost,
-      anesthesiaCost,
+      externalProfessionalCost,
       vetCommissionCost,
       operationalCost,
       totalCost,
@@ -199,6 +230,7 @@ export function calculateProcedure(
       profitAtCurrentPrice,
       marginAtCurrentPrice,
     },
+    externalProfessionalDetails,
     itemDetails,
     itemsCount: itemDetails.length,
   };

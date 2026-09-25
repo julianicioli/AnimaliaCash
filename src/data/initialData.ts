@@ -7,6 +7,9 @@ export const initialClinicSettings: ClinicSettings = {
   logoUrl: '/logo.jpg',
   hourlyOperationalRate: 45.0, // Custo médio de mão de obra/hora operacional ou rateio fixo (energia, água, sala, equipe de apoio)
   defaultAnesthesiaCost: 250.0, // Custo padrão fixo do anestesista terceirizado (lançado automaticamente)
+  externalProfessionals: [
+    { id: 'prof_anesthetist_default', name: 'Anestesista', specialty: 'Anestesiologia', defaultCost: 250.0 },
+  ],
   defaultVetCommissionSurgeryPercent: 25.0, // Comissão padrão do cirurgião veterinário (% sobre o procedimento)
   defaultVetCommissionInternmentPercent: 20.0, // Comissão padrão do veterinário plantonista/internista (%)
   defaultVetCommissionBathPercent: 15.0, // Comissão padrão do tosador/banhista (%)

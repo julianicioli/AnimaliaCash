@@ -23,7 +23,7 @@ const CATEGORY_HEADER: Record<ProcedureCategory, { description: string; newLabel
     newLabel: 'Novo banho & tosa',
   },
   cirurgia: {
-    description: 'Custo de cada cirurgia por peso do paciente, incluindo anestesia e comissão.',
+    description: 'Custo de cada cirurgia por peso do paciente, incluindo os profissionais terceirizados.',
     newLabel: 'Nova cirurgia',
   },
   internacao: {
@@ -55,21 +55,65 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
   const [settings, setSettings] = useState<ClinicSettings>(() => {
     const parsed = loadFromStorage<Partial<ClinicSettings> | null>('vetcusto_settings_v2', null);
     if (!parsed) return initialClinicSettings;
+    const savedProcedures = loadFromStorage<Procedure[]>('vetcusto_procedures_v2', initialProcedures);
+    const migratedProfessionals = parsed.externalVeterinarians?.map((veterinarian) => ({ ...veterinarian }));
+    const externalProfessionals = [
+      ...(parsed.externalProfessionals ?? migratedProfessionals ?? initialClinicSettings.externalProfessionals ?? []),
+    ];
+    const needsAnesthetist = savedProcedures.some((procedure) =>
+      procedure.category === 'cirurgia'
+      && (procedure.anesthesiaCost ?? parsed.defaultAnesthesiaCost ?? 250) > 0
+    );
+    if (needsAnesthetist && !externalProfessionals.some((professional) => professional.id === 'prof_anesthetist_default')) {
+      externalProfessionals.push({
+        id: 'prof_anesthetist_default',
+        name: 'Anestesista',
+        specialty: 'Anestesiologia',
+        defaultCost: parsed.defaultAnesthesiaCost ?? 250,
+      });
+    }
     return {
       ...initialClinicSettings,
       ...parsed,
+      externalProfessionals,
+      externalVeterinarians: undefined,
       projectName: (parsed.projectName === 'VetCusto' || !parsed.projectName) ? 'Animalia Cash' : parsed.projectName,
       logoUrl: parsed.logoUrl || '/logo.jpg',
     };
   });
-  const [procedures, setProcedures] = useState<Procedure[]>(() =>
-    loadFromStorage('vetcusto_procedures_v2', initialProcedures).map((p) =>
-      // Dados antigos de internação guardavam só as horas de atendimento em durationMinutes
-      p.category === 'internacao' && p.laborMinutes === undefined && p.durationMinutes < 1440
-        ? { ...p, durationMinutes: 1440, laborMinutes: p.durationMinutes }
-        : p
-    )
-  );
+  const [procedures, setProcedures] = useState<Procedure[]>(() => {
+    const anesthetist = settings.externalProfessionals?.find((professional) => professional.id === 'prof_anesthetist_default');
+    return loadFromStorage('vetcusto_procedures_v2', initialProcedures).map((procedure) => {
+      const assignments = [...(procedure.externalProfessionalAssignments ?? [])];
+      if (procedure.externalVeterinarianId && !assignments.some((item) => item.professionalId === procedure.externalVeterinarianId)) {
+        const veterinarian = settings.externalProfessionals?.find((item) => item.id === procedure.externalVeterinarianId);
+        assignments.push({
+          professionalId: procedure.externalVeterinarianId,
+          cost: procedure.externalVeterinarianCost ?? veterinarian?.defaultCost ?? 0,
+        });
+      }
+      const legacyAnesthesiaCost = procedure.category === 'cirurgia'
+        ? procedure.anesthesiaCost ?? settings.defaultAnesthesiaCost ?? 250
+        : 0;
+      if (legacyAnesthesiaCost > 0 && anesthetist && !assignments.some((item) => item.professionalId === anesthetist.id)) {
+        assignments.push({ professionalId: anesthetist.id, cost: legacyAnesthesiaCost });
+      }
+
+      return {
+        ...procedure,
+        durationMinutes: procedure.category === 'internacao' && procedure.laborMinutes === undefined && procedure.durationMinutes < 1440
+          ? 1440
+          : procedure.durationMinutes,
+        laborMinutes: procedure.category === 'internacao' && procedure.laborMinutes === undefined && procedure.durationMinutes < 1440
+          ? procedure.durationMinutes
+          : procedure.laborMinutes,
+        externalProfessionalAssignments: assignments.length > 0 ? assignments : undefined,
+        anesthesiaCost: procedure.category === 'cirurgia' ? 0 : procedure.anesthesiaCost,
+        externalVeterinarianId: undefined,
+        externalVeterinarianCost: undefined,
+      };
+    });
+  });
   const [insumos, setInsumos] = useState<Insumo[]>(() => {
     const saved = loadFromStorage('vetcusto_insumos_v2', initialInsumos);
     // Recupera insumos padrão que algum procedimento referencia mas que faltam nos dados salvos

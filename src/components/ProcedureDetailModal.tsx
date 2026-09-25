@@ -28,9 +28,14 @@ export const ProcedureDetailModal: React.FC<ProcedureDetailModalProps> = ({
 
   const composition = [
     { label: 'Insumos', detail: `${calc.itemsCount} itens`, value: breakdown.directCost, color: 'bg-accent-500' },
-    ...(breakdown.anesthesiaCost > 0
-      ? [{ label: 'Anestesia', detail: 'terceirizada', value: breakdown.anesthesiaCost, color: 'bg-sky-500' }]
-      : []),
+    ...calc.externalProfessionalDetails
+      .filter((professional) => professional.cost > 0)
+      .map((professional) => ({
+        label: professional.name,
+        detail: professional.specialty,
+        value: professional.cost,
+        color: 'bg-emerald-500',
+      })),
     {
       label: 'Comissão',
       detail: [procedure.vetCommissionRole, commissionLabel].filter(Boolean).join(' · '),
@@ -104,7 +109,7 @@ export const ProcedureDetailModal: React.FC<ProcedureDetailModalProps> = ({
 
           <dl className="mt-4 divide-y divide-slate-100">
             {composition.map((c) => (
-              <div key={c.label} className="flex items-center justify-between py-2.5 text-sm">
+              <div key={`${c.label}-${c.detail ?? ''}`} className="flex items-center justify-between py-2.5 text-sm">
                 <dt className="flex items-center gap-2.5 min-w-0">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${c.color}`} />
                   <span className="font-medium text-slate-800">{c.label}</span>
