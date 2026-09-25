@@ -77,7 +77,15 @@ export default function App({ initialTab = 'cirurgia' }: AppProps) {
     const savedIds = new Set(saved.map((i) => i.id));
     const referencedIds = new Set(procedures.flatMap((p) => p.items.map((it) => it.insumoId)));
     const missing = initialInsumos.filter((i) => !savedIds.has(i.id) && referencedIds.has(i.id));
-    return missing.length > 0 ? [...saved, ...missing] : saved;
+    // Preenche o tipo de embalagem dos insumos de exemplo salvos antes desse campo existir
+    const initialById = new Map(initialInsumos.map((i) => [i.id, i]));
+    const withPackageType = saved.map((ins) => {
+      const initial = initialById.get(ins.id);
+      return !ins.packageType && initial?.packageType && initial.packageSize === ins.packageSize
+        ? { ...ins, packageType: initial.packageType }
+        : ins;
+    });
+    return [...withPackageType, ...missing];
   });
 
   usePersistedState('vetcusto_settings_v2', settings);

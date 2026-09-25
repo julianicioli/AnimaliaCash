@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { Insumo, Procedure } from '../types';
-import { formatBRL, formatUnitCost, getCategoryDotClass, getCategoryLabel } from '../utils/costCalculations';
+import { formatUnitCost, getCategoryDotClass, getCategoryLabel } from '../utils/costCalculations';
 import { primaryButtonClass } from './Modal';
 import { SectionHeader } from './SectionHeader';
-import { CATEGORY_OPTIONS } from './InsumoModal';
+import { CATEGORY_OPTIONS, describePackage } from './InsumoModal';
 
 interface InsumosManagerProps {
   insumos: Insumo[];
@@ -99,6 +99,7 @@ export const InsumosManager: React.FC<InsumosManagerProps> = ({
             <tbody className="divide-y divide-slate-100">
               {filteredInsumos.map((ins) => {
                 const usageCount = usageCountMap.get(ins.id) || 0;
+                const pkg = describePackage(ins);
                 return (
                   <tr key={ins.id} className="group hover:bg-slate-50/70">
                     <td className="px-5 py-3">
@@ -111,12 +112,10 @@ export const InsumosManager: React.FC<InsumosManagerProps> = ({
                         {getCategoryLabel(ins.category)}
                       </span>
                     </td>
-                    <td
-                      className="px-4 py-3 text-right whitespace-nowrap tabular-nums"
-                      title={ins.packagePrice && ins.packageSize ? `Embalagem: ${formatBRL(ins.packagePrice)} por ${ins.packageSize} ${ins.unit}` : undefined}
-                    >
+                    <td className="px-4 py-3 text-right whitespace-nowrap tabular-nums">
                       <span className="font-medium text-slate-900">{formatUnitCost(ins.costPerUnit)}</span>
                       <span className="text-slate-400"> / {ins.unit}</span>
+                      {pkg && <div className="text-xs text-slate-400 mt-0.5">{pkg}</div>}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-600 whitespace-nowrap tabular-nums">
                       {usageCount === 0 ? <span className="text-slate-400">—</span> : `${usageCount} ${usageCount === 1 ? 'procedimento' : 'procedimentos'}`}
