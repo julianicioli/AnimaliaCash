@@ -502,3 +502,4 @@
 {"_e":"metro:bundling:started","_t":1790812662249,"id":"g","platform":"android","environment":null,"entry":"node_modules\\expo\\AppEntry.js"}
 {"_e":"metro:bundling:progress","_t":1790812662249,"id":"g","progress":0,"total":1,"current":0}
 {"_e":"metro:bundling:done","_t":1790812662302,"id":"g","total":1,"ms":53.0872}
+{"_e":"metro:bundling:failed","_t":1790813233006,"id":null,"message":"SyntaxError: C:\\Users\\Usuário\\Desktop\\estoque.js\\src\\services\\screens\\estoqueScreen.jsx: Unexpected token (328:16)\n\n  326 |   headerContainer: {\n  327 |     backgroundColor: PRIMARY_DARK,\n> 328 |     paddingTop: ,\n      |                 ^\n  329 |     paddingBottom: 16,\n  330 |     paddingHorizontal: 20,\n  331 |     flexDirection: 'row',","importStack":null,"filename":"src\\services\\screens\\estoqueScreen.jsx","targetModuleName":null,"originModulePath":null}
